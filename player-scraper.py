@@ -64,3 +64,47 @@ def clean_avgs(df: pd.DataFrame) -> pd.Series:
     return pd.concat(
         [df.iloc[0, 5:8], df.iloc[0, 9:11], df.iloc[0, 12:14], df.iloc[0, 15:]]
     )
+
+
+def get_career_stats(row: pd.Series) -> pd.Series:
+    """
+    Uses nba_api to get the career totals and averages for each player for both the
+    regular season and playoffs. Processes averages with aformentioned helper function
+    and concatenates Series into a Series that is attached to main DataFrame
+
+    :param row: The Series representing a player from the inactive or active Dataframes
+    :type row: pd.Series
+    :return: A formatted Series of the player's career totals and averages
+    :rtype: Series[Any]
+    """
+
+    # calls to get the player's career totals and averages, sleeping to respect the
+    # NBA's rate limiting
+    sleep(0.5)
+    totals = playercareerstats.PlayerCareerStats(row["id"]).get_data_frames()
+    sleep(0.5)
+    avgs = playercareerstats.PlayerCareerStats(
+        row["id"], per_mode36="PerGame"
+    ).get_data_frames()
+
+    # for inactive players, check their last season to determine eligibility
+    if (
+        row["is_active"] == False
+        and season - (int(totals[0].iloc[-1]["SEASON_ID"][:4]) + 1) <= 4
+    ):
+        inactive_ineligibles.append[row["full_name"]]
+
+    # if a player has never played a playoff game, only return their regular season
+    # totals and averages (index 1 in both lists)
+    if len(totals[3]) == 0:
+        return pd.concat([totals[1].iloc[0, 3:], clean_avgs(avgs[1])])
+    # otherwise, add in the playoff DataFrames at index 3; iloc and slicing are used
+    # near identical to clean_avgs, but with shooting splits and games played included
+    return pd.concat(
+        [
+            totals[1].iloc[0, 3:],
+            clean_avgs(avgs[1]),
+            totals[3].iloc[0, 3:].add_prefix("PF_"),
+            clean_avgs(avgs[3]).add_prefix("PF_"),
+        ]
+    )
