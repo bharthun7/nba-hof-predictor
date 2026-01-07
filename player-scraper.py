@@ -108,3 +108,30 @@ def get_career_stats(row: pd.Series) -> pd.Series:
             clean_avgs(avgs[3]).add_prefix("PF_"),
         ]
     )
+
+
+def get_awards(row: pd.Series) -> pd.Series:
+    """
+    Uses nba_api to get a list of awards a player has won and converts that into a
+    Series of number of wins for each award to be attached to the main DataFrame
+
+    :param row: The Series representing a player from the inactive or active DataFrames
+    :type row: pd.Series
+    :return: A series of the number of times a player has won each award
+    :rtype: Series[Any]
+    """
+    
+    # call to get list of player's awards, sleeping to respect rate-limiting
+    sleep(0.5)
+    awards = playerawards.PlayerAwards(row["id"]).get_data_frames()[0]
+
+    # dictionary used to map All-NBA team numbers to distinguish between each team
+    team_nums = {"1": "1st", "2": "2nd", "3": "3rd"}
+    awards.loc[
+        awards["ALL_NBA_TEAM_NUMBER"].fillna("").str.isnumeric(), "DESCRIPTION"
+    ] = (
+        awards["ALL_NBA_TEAM_NUMBER"].map(team_nums) + " Team " + awards["DESCRIPTION"]
+    )
+
+    # Hall of Fame Inductee is a listed award, so HOF status will be numeric for now
+    return awards.groupby("DESCRIPTION").size()
