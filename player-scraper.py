@@ -141,9 +141,19 @@ print("Begin scraping stats for inactive players...")
 inactives=pd.concat([inactives,inactives.apply(get_career_stats,axis=1)],axis=1)
 print("Finished scraping stats for inactive players, begin scraping awards...")
 inactives=pd.concat([inactives,inactives.apply(get_awards,axis=1)],axis=1).fillna(0)
-print("Finished scraping awards, begin removing IIs and saving to csv file")
+print("Finished scraping awards, begin removing IIs and saving to csv file...")
+
 #use the inactive_ineligible list to remove any of those players from the inactive df
 inactive_ineligibles_df=inactives[inactives["full_name"].isin(inactive_ineligibles)]
 # that df is then saved to a csv for easy access/to prevent repeated scraping
-inactives.drop(inactive_ineligibles_df.index).to_csv("ineligible_player_data.csv")
+inactives.drop(inactive_ineligibles_df.index).to_csv("eligible_player_data.csv")
+
 #now we'll repeat that whole process for active players
+print("Finished saving inactives df, begin scraping stats for active players...")
+actives=pd.concat([actives,actives.apply(get_career_stats,axis=1)],axis=1)
+print("Finished scraping stats for active players, begin scraping awards...")
+actives=pd.concat([actives,actives.apply(get_awards,axis=1)],axis=1).fillna(0)
+print("Finished scraping awards, begin adding IIs and saving to csv file...")
+
+pd.concat(actives,inactive_ineligibles_df).to_csv("ineligible_player_data.csv")
+print("Finished scraping!")
