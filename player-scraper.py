@@ -135,3 +135,15 @@ def get_awards(row: pd.Series) -> pd.Series:
 
     # Hall of Fame Inductee is a listed award, so HOF status will be numeric for now
     return awards.groupby("DESCRIPTION").size()
+
+#for each function, apply will create a DataFrame that can be concatenated row-wise
+print("Begin scraping stats for inactive players...")
+inactives=pd.concat([inactives,inactives.apply(get_career_stats,axis=1)],axis=1)
+print("Finished scraping stats for inactive players, begin scraping awards...")
+inactives=pd.concat([inactives,inactives.apply(get_awards,axis=1)],axis=1).fillna(0)
+print("Finished scraping awards, begin removing IIs and saving to csv file")
+#use the inactive_ineligible list to remove any of those players from the inactive df
+inactive_ineligibles_df=inactives[inactives["full_name"].isin(inactive_ineligibles)]
+# that df is then saved to a csv for easy access/to prevent repeated scraping
+inactives.drop(inactive_ineligibles_df.index).to_csv("ineligible_player_data.csv")
+#now we'll repeat that whole process for active players
