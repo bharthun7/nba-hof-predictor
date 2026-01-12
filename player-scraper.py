@@ -18,6 +18,10 @@ if date.today().month > 6:
     # this is needed for later months (i.e. October 2025 is part of 2025-26 season)
     season += 1
 
+# this player is an outlier; his stat page is completely blank. Removing him for now
+# until I figure out what to do
+inactives = inactives.drop(inactives[inactives["id"] == 1629152].index)
+
 
 def rename_avgs(col: str) -> str:
     """
@@ -78,6 +82,8 @@ def get_career_stats(row: pd.Series) -> pd.Series:
     :rtype: Series[Any]
     """
 
+    # for debugging purposes
+    # print(row["full_name"])
     # calls to get the player's career totals and averages, sleeping to respect the
     # NBA's rate limiting
     sleep(0.5)
@@ -92,7 +98,7 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         row["is_active"] == False
         and season - (int(totals[0].iloc[-1]["SEASON_ID"][:4]) + 1) <= 4
     ):
-        inactive_ineligibles.append[row["full_name"]]
+        inactive_ineligibles.append(row["full_name"])
 
     # if a player has never played a playoff game, only return their regular season
     # totals and averages (index 1 in both lists)
@@ -120,7 +126,7 @@ def get_awards(row: pd.Series) -> pd.Series:
     :return: A series of the number of times a player has won each award
     :rtype: Series[Any]
     """
-    
+
     # call to get list of player's awards, sleeping to respect rate-limiting
     sleep(0.5)
     awards = playerawards.PlayerAwards(row["id"]).get_data_frames()[0]
@@ -136,24 +142,27 @@ def get_awards(row: pd.Series) -> pd.Series:
     # Hall of Fame Inductee is a listed award, so HOF status will be numeric for now
     return awards.groupby("DESCRIPTION").size()
 
-#for each function, apply will create a DataFrame that can be concatenated row-wise
+
+# for each function, apply will create a DataFrame that can be concatenated row-wise
 print("Begin scraping stats for inactive players...")
-inactives=pd.concat([inactives,inactives.apply(get_career_stats,axis=1)],axis=1)
+inactives = pd.concat([inactives, inactives.apply(get_career_stats, axis=1)], axis=1)
 print("Finished scraping stats for inactive players, begin scraping awards...")
-inactives=pd.concat([inactives,inactives.apply(get_awards,axis=1)],axis=1).fillna(0)
+inactives = pd.concat([inactives, inactives.apply(get_awards, axis=1)], axis=1).fillna(
+    0
+)
 print("Finished scraping awards, begin removing IIs and saving to csv file...")
 
-#use the inactive_ineligible list to remove any of those players from the inactive df
-inactive_ineligibles_df=inactives[inactives["full_name"].isin(inactive_ineligibles)]
+# use the inactive_ineligible list to remove any of those players from the inactive df
+inactive_ineligibles_df = inactives[inactives["full_name"].isin(inactive_ineligibles)]
 # that df is then saved to a csv for easy access/to prevent repeated scraping
 inactives.drop(inactive_ineligibles_df.index).to_csv("eligible_player_data.csv")
 
-#now we'll repeat that whole process for active players
+# now we'll repeat that whole process for active players
 print("Finished saving inactives df, begin scraping stats for active players...")
-actives=pd.concat([actives,actives.apply(get_career_stats,axis=1)],axis=1)
+actives = pd.concat([actives, actives.apply(get_career_stats, axis=1)], axis=1)
 print("Finished scraping stats for active players, begin scraping awards...")
-actives=pd.concat([actives,actives.apply(get_awards,axis=1)],axis=1).fillna(0)
+actives = pd.concat([actives, actives.apply(get_awards, axis=1)], axis=1).fillna(0)
 print("Finished scraping awards, begin adding IIs and saving to csv file...")
 
-pd.concat(actives,inactive_ineligibles_df).to_csv("ineligible_player_data.csv")
+pd.concat(actives, inactive_ineligibles_df).to_csv("ineligible_player_data.csv")
 print("Finished scraping!")
