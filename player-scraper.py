@@ -20,7 +20,9 @@ if date.today().month > 6:
 
 # this player is an outlier; his stat page is completely blank. Removing him for now
 # until I figure out what to do
-inactives = inactives.drop(inactives[inactives["id"] == 1629152].index)
+# ok so there's multiple
+empties = ["DeVaughn Akoon-Purcell", "Timmy Allen"]
+inactives = inactives.drop(inactives[inactives["full_name"].isin(empties)].index)
 
 
 def rename_avgs(col: str) -> str:
@@ -83,7 +85,7 @@ def get_career_stats(row: pd.Series) -> pd.Series:
     """
 
     # for debugging purposes
-    # print(row["full_name"])
+    print(row["full_name"])
     # calls to get the player's career totals and averages, sleeping to respect the
     # NBA's rate limiting
     sleep(0.5)
