@@ -18,12 +18,6 @@ if date.today().month > 6:
     # this is needed for later months (i.e. October 2025 is part of 2025-26 season)
     season += 1
 
-# this player is an outlier; his stat page is completely blank. Removing him for now
-# until I figure out what to do
-# ok so there's multiple
-empties = ["DeVaughn Akoon-Purcell", "Timmy Allen"]
-inactives = inactives.drop(inactives[inactives["full_name"].isin(empties)].index)
-
 
 def rename_avgs(col: str) -> str:
     """
