@@ -134,16 +134,21 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         # career stats
         driver = webdriver.Firefox()
 
-        name_parts = row["full_name"].lower().replace("-", "").split(" ")
-        # BR uses first 5 of last name, first 2 of first name for the url, no hyphens
+        # BR organizes players by first letter of first name, so find player in their
+        # corresponding page
         driver.get(
-            f"https://www.basketball-reference.com/players/{name_parts[1][0]}/{name_parts[1][:5]}{name_parts[0][:2]}01.html"
+            f"https://www.basketball-reference.com/players/{row['full_name'].lower()[0]}/"
         )
+        player_link = driver.find_element(By.LINK_TEXT, row["full_name"]).get_attribute(
+            "href"
+        )
+        driver.get(player_link)  # type: ignore
 
         # use IDs to get tables for career totals and averages, playoffs not needed
         totals_table = driver.find_element(By.ID, "totals_stats")
         avgs_table = driver.find_element(By.ID, "per_game_stats")
         # then convert said tables to Series for processing
+        # TODO need to handle case where they played on multiple teams
         totals = pd.read_html(StringIO(totals_table.get_attribute("outerHTML")))[
             0
         ].iloc[1]
