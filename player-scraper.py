@@ -15,6 +15,8 @@ actives = pd.DataFrame(players.get_active_players())
 # this list is used to keep track of players who are inactive, but not long enough to
 # be HOF-eligible (4 years according to their website)
 inactive_ineligibles = []
+# this one is used for G-League players who never played in the NBA
+never_in_nba = []
 
 # we'll use the current data to find the current season
 season = date.today().year
@@ -179,6 +181,10 @@ def get_career_stats(row: pd.Series) -> pd.Series:
                 avgs[21:-1],
             ]
         )
+    # if the player has no seasons, skip over them; they'll be removed later
+    if len(totals[0]) == 0:
+        never_in_nba.append(row["full_name"])
+        return pd.Series()
     sleep(0.5)
     avgs = playercareerstats.PlayerCareerStats(
         row["id"], per_mode36="PerGame"
