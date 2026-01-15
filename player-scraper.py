@@ -1,9 +1,13 @@
 import pandas as pd
 from time import sleep
 from datetime import date
+from io import StringIO
 
 from nba_api.stats.static import players
 from nba_api.stats.endpoints import playerawards, playercareerstats
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
 
 # get our dataframes of inactive and active player
 inactives = pd.DataFrame(players.get_inactive_players())
@@ -66,6 +70,43 @@ def clean_avgs(df: pd.DataFrame) -> pd.Series:
     )
 
 
+def insert_missing(stats: pd.Series) -> pd.Series:
+    """
+    Modifies a player's career statline scraped from Basketball Reference if it's
+    missing shooting percentage columns due to having 0 attempts
+
+    :param stats: The Series representing the career statline for a player
+    :type stats: pd.Series
+    :return: The modified Series with any missing shooting percentage columns inserted
+    :rtype: Series[Any]
+    """
+
+    # if 0 FGs were attempted, FG% will be missing along with 2P%, 3P%, and EFG%
+    if "FG%" not in stats:
+        stats = pd.concat(
+            [
+                stats[:10],
+                pd.Series({"FG%": 0.0}),
+                stats[10:12],
+                pd.Series({"3P%": 0.0}),
+                stats[12:14],
+                pd.Series({"2P%": 0.0, "eFG%": 0.0}),
+                stats[14:],
+            ]
+        )
+    # otherwise, check 3P% and 2P% since player may have only attempted one kind
+    elif "3P%" not in stats:
+        stats = pd.concat([stats[:13], pd.Series({"3P%": 0.0}), stats[13:]])
+    elif "2P%" not in stats:
+        stats = pd.concat([stats[:16], pd.Series({"2P%": 0.0}), stats[16:]])
+
+    # FT attempts is independent of FG attempts but follows same logic
+    if "FT%" not in stats:
+        stats = pd.concat([stats[:20], pd.Series({"FT%": 0.0}), stats[20:]])
+
+    return stats
+
+
 def get_career_stats(row: pd.Series) -> pd.Series:
     """
     Uses nba_api to get the career totals and averages for each player for both the
@@ -83,7 +124,61 @@ def get_career_stats(row: pd.Series) -> pd.Series:
     # calls to get the player's career totals and averages, sleeping to respect the
     # NBA's rate limiting
     sleep(0.5)
-    totals = playercareerstats.PlayerCareerStats(row["id"]).get_data_frames()
+    try:
+        totals = playercareerstats.PlayerCareerStats(row["id"]).get_data_frames()
+    except KeyError:
+        # a KeyError will occur if the player's page on nba.com is empty. In this case,
+        # Selenium is needed to manually scrape Basketball Reference to get their
+        # career stats
+        driver = webdriver.Firefox()
+
+        name_parts = row["full_name"].lower().replace("-", "").split(" ")
+        # BR uses first 5 of last name, first 2 of first name for the url, no hyphens
+        driver.get(
+            f"https://www.basketball-reference.com/players/{name_parts[1][0]}/{name_parts[1][:5]}{name_parts[0][:2]}01.html"
+        )
+
+        # use IDs to get tables for career totals and averages, playoffs not needed
+        totals_table = driver.find_element(By.ID, "totals_stats")
+        avgs_table = driver.find_element(By.ID, "per_game_stats")
+        # then convert said tables to Series for processing
+        totals = pd.read_html(StringIO(totals_table.get_attribute("outerHTML")))[
+            0
+        ].iloc[1]
+        avgs = pd.read_html(StringIO(avgs_table.get_attribute("outerHTML")))[0].iloc[1]
+        driver.quit()
+
+        # used for converting BR column names to NBA.com column names
+        br_rename = {
+            "G": "GP",
+            "MP": "MIN",
+            "FG": "FGM",
+            "FG%": "FG_PCT",
+            "3P": "FG3M",
+            "3P%": "FG3_PCT",
+            "3PA": "FG3A",
+            "FT": "FTM",
+            "FT%": "FT_PCT",
+            "ORB": "OREB",
+            "DRB": "DREB",
+            "TRB": "REB",
+        }
+        # from here, insert_missing will be used to ensure all required columns are
+        # present, and columns will be renamed to align with the rest of the DataFrame
+        totals = insert_missing(totals).rename(br_rename)
+        avgs = insert_missing(avgs).rename(br_rename).rename(rename_avgs)
+
+        # concatenate the two together like usual, ignoring irrelevant columns
+        return pd.concat(
+            [
+                totals[5:14],
+                totals[18:-2],
+                avgs[7:10],
+                avgs[11:13],
+                avgs[18:20],
+                avgs[21:-1],
+            ]
+        )
     sleep(0.5)
     avgs = playercareerstats.PlayerCareerStats(
         row["id"], per_mode36="PerGame"
@@ -160,5 +255,5 @@ print("Finished scraping stats for active players, begin scraping awards...")
 actives = pd.concat([actives, actives.apply(get_awards, axis=1)], axis=1).fillna(0)
 print("Finished scraping awards, begin adding IIs and saving to csv file...")
 
-pd.concat(actives, inactive_ineligibles_df).to_csv("ineligible_player_data.csv")
+pd.concat([actives, inactive_ineligibles_df]).to_csv("ineligible_player_data.csv")
 print("Finished scraping!")
