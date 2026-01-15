@@ -133,11 +133,12 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         # Selenium is needed to manually scrape Basketball Reference to get their
         # career stats
         driver = webdriver.Firefox()
+        driver.install_addon("ublock_origin-1.68.0.xpi")
 
-        # BR organizes players by first letter of first name, so find player in their
+        # BR organizes players by first letter of last name, so find player in their
         # corresponding page
         driver.get(
-            f"https://www.basketball-reference.com/players/{row['full_name'].lower()[0]}/"
+            f"https://www.basketball-reference.com/players/{row['full_name'].lower().split(" ")[1][0]}/"
         )
         player_link = driver.find_element(By.LINK_TEXT, row["full_name"]).get_attribute(
             "href"
@@ -148,7 +149,7 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         totals_table = driver.find_element(By.ID, "totals_stats")
         avgs_table = driver.find_element(By.ID, "per_game_stats")
         # then convert said tables to Series for processing
-        # TODO need to handle case where they played on multiple teams
+        # TODO need to handle case where they played on multiple teams; use Joel Ayayi as a test case
         totals = pd.read_html(StringIO(totals_table.get_attribute("outerHTML")))[
             0
         ].iloc[1]
