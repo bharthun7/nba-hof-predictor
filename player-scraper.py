@@ -167,11 +167,11 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         totals_table = driver.find_element(By.ID, "totals_stats")
         avgs_table = driver.find_element(By.ID, "per_game_stats")
         # then convert said tables to Series for processing
-        # TODO need to handle case where they played on multiple teams; use Jarrell Brantley as a test case
+        # TODO need to handle case where they played in playoffs - Jarrell Brantley
         totals = pd.read_html(StringIO(totals_table.get_attribute("outerHTML")))[
             0
-        ].iloc[1]
-        avgs = pd.read_html(StringIO(avgs_table.get_attribute("outerHTML")))[0].iloc[1]
+        ].iloc[-2]
+        avgs = pd.read_html(StringIO(avgs_table.get_attribute("outerHTML")))[0].iloc[-1]
         driver.quit()
 
         # used for converting BR column names to NBA.com column names
