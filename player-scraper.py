@@ -2,12 +2,17 @@ import pandas as pd
 from time import sleep
 from datetime import date
 from io import StringIO
+import requests
 
 from nba_api.stats.static import players
 from nba_api.stats.endpoints import playerawards, playercareerstats
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
+
+options = Options()
+options.add_argument("--headless")
 
 # get our dataframes of inactive and active player
 inactives = pd.DataFrame(players.get_inactive_players())
@@ -23,6 +28,18 @@ season = date.today().year
 if date.today().month > 6:
     # this is needed for later months (i.e. October 2025 is part of 2025-26 season)
     season += 1
+
+custom_headers = {
+    "Host": "stats.nba.com",
+    "Connection": "keep-alive",
+    "Cache-Control": "max-age=0",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:147.0) Gecko/20100101 Firefox/147.0",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.nba.com",
+}
 
 
 def rename_avgs(col: str) -> str:
@@ -121,18 +138,19 @@ def get_career_stats(row: pd.Series) -> pd.Series:
     :rtype: Series[Any]
     """
 
-    # for debugging purposes
-    print(row["full_name"])
     # calls to get the player's career totals and averages, sleeping to respect the
     # NBA's rate limiting
-    sleep(0.5)
+    sleep(10)
     try:
-        totals = playercareerstats.PlayerCareerStats(row["id"]).get_data_frames()
+        totals = playercareerstats.PlayerCareerStats(
+            row["id"], headers=custom_headers
+        ).get_data_frames()
     except KeyError:
+        print(f"{row["full_name"]} scraped on BR")
         # a KeyError will occur if the player's page on nba.com is empty. In this case,
         # Selenium is needed to manually scrape Basketball Reference to get their
         # career stats
-        driver = webdriver.Firefox()
+        driver = webdriver.Firefox(options=options)
         driver.install_addon("ublock_origin-1.68.0.xpi")
 
         # BR organizes players by first letter of last name, so find player in their
@@ -149,7 +167,7 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         totals_table = driver.find_element(By.ID, "totals_stats")
         avgs_table = driver.find_element(By.ID, "per_game_stats")
         # then convert said tables to Series for processing
-        # TODO need to handle case where they played on multiple teams; use Joel Ayayi as a test case
+        # TODO need to handle case where they played on multiple teams; use Jarrell Brantley as a test case
         totals = pd.read_html(StringIO(totals_table.get_attribute("outerHTML")))[
             0
         ].iloc[1]
@@ -187,20 +205,29 @@ def get_career_stats(row: pd.Series) -> pd.Series:
                 avgs[21:-1],
             ]
         )
+    except requests.exceptions.ReadTimeout:
+        print(f"{row['full_name']} caused a timeout")
+        quit()
     # if the player has no seasons, skip over them; they'll be removed later
     if len(totals[0]) == 0:
+        print(f"{row['full_name']} never played in the NBA")
         never_in_nba.append(row["full_name"])
         return pd.Series()
-    sleep(0.5)
-    avgs = playercareerstats.PlayerCareerStats(
-        row["id"], per_mode36="PerGame"
-    ).get_data_frames()
+    sleep(10)
+    try:
+        avgs = playercareerstats.PlayerCareerStats(
+            row["id"], per_mode36="PerGame", headers=custom_headers
+        ).get_data_frames()
+    except requests.exceptions.ReadTimeout:
+        print(f"{row['full_name']} caused a timeout")
+        quit()
 
     # for inactive players, check their last season to determine eligibility
     if (
         row["is_active"] == False
         and season - (int(totals[0].iloc[-1]["SEASON_ID"][:4]) + 1) <= 4
     ):
+        print(f"{row['full_name']} is inactive-ineligible")
         inactive_ineligibles.append(row["full_name"])
 
     # if a player has never played a playoff game, only return their regular season
@@ -229,10 +256,12 @@ def get_awards(row: pd.Series) -> pd.Series:
     :return: A series of the number of times a player has won each award
     :rtype: Series[Any]
     """
-
+    print(row["full_name"])
     # call to get list of player's awards, sleeping to respect rate-limiting
-    sleep(0.5)
-    awards = playerawards.PlayerAwards(row["id"]).get_data_frames()[0]
+    sleep(10)
+    awards = playerawards.PlayerAwards(
+        row["id"], headers=custom_headers
+    ).get_data_frames()[0]
 
     # dictionary used to map All-NBA team numbers to distinguish between each team
     team_nums = {"1": "1st", "2": "2nd", "3": "3rd"}
@@ -241,7 +270,8 @@ def get_awards(row: pd.Series) -> pd.Series:
     ] = (
         awards["ALL_NBA_TEAM_NUMBER"].map(team_nums) + " Team " + awards["DESCRIPTION"]
     )
-
+    if "Hall of Fame Inductee" in awards["DESCRIPTION"].values:
+        print(f"{row['full_name']} is a Hall of Famer")
     # Hall of Fame Inductee is a listed award, so HOF status will be numeric for now
     return awards.groupby("DESCRIPTION").size()
 
