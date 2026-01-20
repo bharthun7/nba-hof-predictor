@@ -22,6 +22,8 @@ actives = pd.DataFrame(players.get_active_players())
 inactive_ineligibles = []
 # this one is used for G-League players who never played in the NBA but have a page
 never_in_nba = []
+# minor correction for a player whose name is just wrong, which messes things up
+inactives.loc[inactives["full_name"] == "Cui Cui", "full_name"] = "Yongxi Cui"
 
 # we'll use the current data to find the current season
 season = date.today().year
