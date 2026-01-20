@@ -247,7 +247,7 @@ def get_career_stats(row: pd.Series) -> pd.Series:
                 avgs[21:-1],
             ]
         )
-    except requests.exceptions.ReadTimeout:
+    except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
         print(f"{row['full_name']} caused a timeout")
         quit()
 
@@ -262,7 +262,7 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         avgs = playercareerstats.PlayerCareerStats(
             row["id"], per_mode36="PerGame", headers=custom_headers
         ).get_data_frames()
-    except requests.exceptions.ReadTimeout:
+    except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
         print(f"{row['full_name']} caused a timeout")
         quit()
 
