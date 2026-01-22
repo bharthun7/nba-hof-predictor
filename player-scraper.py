@@ -22,8 +22,9 @@ actives = pd.DataFrame(players.get_active_players())
 inactive_ineligibles = []
 # this one is used for G-League players who never played in the NBA but have a page
 never_in_nba = []
-# minor correction for a player whose name is just wrong, which messes things up
-inactives.loc[inactives["full_name"] == "Cui Cui", "full_name"] = "Yongxi Cui"
+# minor corrections for players whose names are just wrong, which messes things up
+inactives.loc[inactives["full_name"] == "Cui Cui", "full_name"] = "Cui Yongxi"
+inactives.loc[inactives["full_name"] == "Ike Fontaine", "full_name"] = "Isaac Fontaine"
 
 # we'll use the current data to find the current season
 season = date.today().year
@@ -160,7 +161,7 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         # BR organizes players by first letter of last name, so find player in their
         # corresponding page
         driver.get(
-            f"https://www.basketball-reference.com/players/{row['full_name'].lower().split(" ")[1][0]}/"
+            f"https://www.basketball-reference.com/players/{row['last_name'].lower()[0]}/"
         )
         player_link = driver.find_element(By.LINK_TEXT, row["full_name"]).get_attribute(
             "href"
