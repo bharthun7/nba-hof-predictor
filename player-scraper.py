@@ -172,10 +172,12 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         totals_table = driver.find_element(By.ID, "totals_stats")
         avgs_table = driver.find_element(By.ID, "per_game_stats")
         # then convert said tables to Series for processing
-        totals = pd.read_html(StringIO(totals_table.get_attribute("outerHTML")))[
-            0
-        ].iloc[-2]
-        avgs = pd.read_html(StringIO(avgs_table.get_attribute("outerHTML")))[0].iloc[-1]
+        totals = pd.read_html(StringIO(totals_table.get_attribute("outerHTML")))[0]
+        # extract the career row by regex, as it position can vary if they player has
+        # played for multiple teams in their career
+        totals = totals[totals.fillna("")["Season"].str.contains(r"^\d Yrs?$")].iloc[0]
+        avgs = pd.read_html(StringIO(avgs_table.get_attribute("outerHTML")))[0]
+        avgs = avgs[avgs.fillna("")["Season"].str.contains(r"^\d Yrs?$")].iloc[0]
 
         # if a player has played in the playoffs, he'll have playoff tables as well
         pf_totals_table = driver.find_elements(By.ID, "totals_stats_post")
@@ -184,14 +186,20 @@ def get_career_stats(row: pd.Series) -> pd.Series:
             # if the table exists, Series for playoff totals and averages can be made
             pf_totals = pd.read_html(
                 StringIO(pf_totals_table[0].get_attribute("outerHTML"))
-            )[0].iloc[-2]
+            )[0]
+            pf_totals = pf_totals[
+                pf_totals.fillna("")["Season"].str.contains(r"^\d Yrs?$")
+            ].iloc[0]
             pf_avgs = pd.read_html(
                 StringIO(
                     driver.find_element(By.ID, "per_game_stats_post").get_attribute(
                         "outerHTML"
                     )
                 )
-            )[0].iloc[-1]
+            )[0]
+            pf_avgs = pf_avgs[
+                pf_avgs.fillna("")["Season"].str.contains(r"^\d Yrs?$")
+            ].iloc[0]
             # this is now set to true, so playoff Series can be concatenated later
             has_pf = True
         driver.quit()
