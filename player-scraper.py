@@ -25,6 +25,7 @@ never_in_nba = []
 # minor corrections for players whose names are just wrong, which messes things up
 inactives.loc[inactives["full_name"] == "Cui Cui", "full_name"] = "Cui Yongxi"
 inactives.loc[inactives["full_name"] == "Ike Fontaine", "full_name"] = "Isaac Fontaine"
+inactives.loc[inactives["full_name"] == "Ruben Garces", "full_name"] = "Rubén Garcés"
 
 # we'll use the current data to find the current season
 season = date.today().year
