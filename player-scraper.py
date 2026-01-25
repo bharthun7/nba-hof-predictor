@@ -22,10 +22,40 @@ actives = pd.DataFrame(players.get_active_players())
 inactive_ineligibles = []
 # this one is used for G-League players who never played in the NBA but have a page
 never_in_nba = []
+
 # minor corrections for players whose names are just wrong, which messes things up
 inactives.loc[inactives["full_name"] == "Cui Cui", "full_name"] = "Cui Yongxi"
 inactives.loc[inactives["full_name"] == "Ike Fontaine", "full_name"] = "Isaac Fontaine"
 inactives.loc[inactives["full_name"] == "Ruben Garces", "full_name"] = "Rubén Garcés"
+inactives.loc[inactives["full_name"] == "Vincent Hunter", "full_name"] = "Vince Hunter"
+inactives.loc[inactives["full_name"] == "Ibrahim Kutluay", "full_name"] = "Ibo Kutluay"
+inactives.loc[inactives["full_name"] == "Nicolas Laprovittola", "full_name"] = (
+    "Nicolás Laprovíttola"
+)
+inactives.loc[inactives["full_name"] == "Karim Mane", "full_name"] = "Karim Mané"
+inactives.loc[inactives["full_name"] == "Boniface Ndong", "full_name"] = (
+    "Boniface N'Dong"
+)
+inactives.loc[inactives["full_name"] == "Zach Norvell Jr.", "full_name"] = (
+    "Zach Norvell"
+)
+inactives.loc[inactives["full_name"] == "JJ O'Brien", "full_name"] = "J.J. O'Brien"
+inactives.loc[inactives["full_name"] == "Maozinha Pereira", "full_name"] = (
+    "Mãozinha Pereira"
+)
+inactives.loc[inactives["full_name"] == "Filip Petrusev", "full_name"] = (
+    "Filip Petrušev"
+)
+inactives.loc[inactives["full_name"] == "Aleksandar Radojevic", "full_name"] = (
+    "Aleksandar Radojević"
+)
+inactives.loc[inactives["full_name"] == "Trevon Scott", "full_name"] = "Tre Scott"
+inactives.loc[inactives["full_name"] == "DJ Stephens", "full_name"] = "D.J. Stephens"
+inactives.loc[inactives["full_name"] == "Slavko Vranes", "full_name"] = "Slavko Vraneš"
+inactives.loc[inactives["full_name"] == "MJ Walker", "full_name"] = "M.J. Walker"
+inactives.loc[inactives["full_name"] == "Matt Williams Jr.", "full_name"] = (
+    "Matt Williams"
+)
 
 # we'll use the current data to find the current season
 season = date.today().year
