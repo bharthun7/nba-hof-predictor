@@ -367,7 +367,13 @@ def get_awards(row: pd.Series) -> pd.Series:
 # for each function, apply will create a DataFrame that can be concatenated row-wise
 print("Begin scraping stats for inactive players...")
 inactives = pd.concat([inactives, inactives.apply(get_career_stats, axis=1)], axis=1)
+
+# adding an intermediate save to csv file as a fail-safe so I wouldn't have to repeat
+# the entire stats process again in the event of internet going out, etc
+inactives.to_csv("eligible_player_data.csv")
+
 print("Finished scraping stats for inactive players, begin scraping awards...")
+inactives = pd.read_csv("eligible_player_data.csv")
 inactives = pd.concat([inactives, inactives.apply(get_awards, axis=1)], axis=1).fillna(
     0
 )
@@ -385,7 +391,9 @@ inactives.drop(inactive_ineligibles_df.index).drop(never_in_nba_df.index).to_csv
 # now we'll repeat that whole process for active players
 print("Finished saving inactives df, begin scraping stats for active players...")
 actives = pd.concat([actives, actives.apply(get_career_stats, axis=1)], axis=1)
+actives.to_csv("ineligible_player_data.csv")
 print("Finished scraping stats for active players, begin scraping awards...")
+actives = pd.read_csv("ineligible_player_data.csv")
 actives = pd.concat([actives, actives.apply(get_awards, axis=1)], axis=1).fillna(0)
 print("Finished scraping awards, begin adding IIs and saving to csv file...")
 
