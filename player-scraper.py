@@ -204,6 +204,23 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         avgs_table = driver.find_element(By.ID, "per_game_stats")
         # then convert said tables to Series for processing
         totals = pd.read_html(StringIO(totals_table.get_attribute("outerHTML")))[0]
+
+        # check for inactive-ineligible, albeit slightly more complicated than usual
+        if (
+            season
+            - (
+                int(
+                    totals[totals["season"].str.contains(r"\d{4}-\d{2}")].iloc[-1][
+                        "Season"
+                    ][:4]
+                )
+                + 1
+            )
+            <= 4
+        ):
+            print("Also inactive-ineligible")
+            inactive_ineligibles.append(row["full_name"])
+
         # extract the career row by regex, as it position can vary if they player has
         # played for multiple teams in their career
         totals = totals[totals.fillna("")["Season"].str.contains(r"^\d Yrs?$")].iloc[0]
