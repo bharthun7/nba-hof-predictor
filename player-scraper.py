@@ -76,6 +76,22 @@ custom_headers = {
     "Referer": "https://www.nba.com",
 }
 
+# used for converting BR column names to NBA.com column names
+br_rename = {
+    "G": "GP",
+    "MP": "MIN",
+    "FG": "FGM",
+    "FG%": "FG_PCT",
+    "3P": "FG3M",
+    "3P%": "FG3_PCT",
+    "3PA": "FG3A",
+    "FT": "FTM",
+    "FT%": "FT_PCT",
+    "ORB": "OREB",
+    "DRB": "DREB",
+    "TRB": "REB",
+}
+
 
 def rename_avgs(col: str) -> str:
     """
@@ -161,19 +177,19 @@ def insert_missing(stats: pd.Series) -> pd.Series:
     return stats
 
 
-def get_career_stats(row: pd.Series) -> pd.Series:
+def get_totals(row: pd.Series) -> pd.Series:
     """
-    Uses nba_api to get the career totals and averages for each player for both the
-    regular season and playoffs. Processes averages with aformentioned helper function
-    and concatenates Series into a Series that is attached to main DataFrame
+    Uses nba_api to get the career totals for each player for both the regular
+    season and playoffs. Scrapes Basketball Reference when needed and concatenates
+    Series into a Series that is attached to main DataFrame
 
     :param row: The Series representing a player from the inactive or active Dataframes
     :type row: pd.Series
-    :return: A formatted Series of the player's career totals and averages
+    :return: A formatted Series of the player's career totals
     :rtype: Series[Any]
     """
 
-    # calls to get the player's career totals and averages, sleeping to respect the
+    # calls to get the player's career totals, sleeping to respect the
     # NBA's rate limiting
     sleep(10)
     try:
@@ -199,51 +215,146 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         )
         driver.get(player_link)  # type: ignore
 
-        # use IDs to get tables for career totals and averages, playoffs not needed
+        # use ID to get table for career totals, playoffs not needed yet
         totals_table = driver.find_element(By.ID, "totals_stats")
-        avgs_table = driver.find_element(By.ID, "per_game_stats")
-        # then convert said tables to Series for processing
+        # then convert said table to a Series for processing
         totals = pd.read_html(StringIO(totals_table.get_attribute("outerHTML")))[0]
 
-        # check for inactive-ineligible, albeit slightly more complicated than usual
-        if (
-            season
-            - (
-                int(
-                    totals[totals["season"].str.contains(r"\d{4}-\d{2}")].iloc[-1][
-                        "Season"
-                    ][:4]
-                )
-                + 1
+        # get last season for inactive-ineligible check, albeit slightly more complex
+        last_season = (
+            int(
+                totals[totals.fillna("")["Season"].str.contains(r"\d{4}-\d{2}")].iloc[
+                    -1
+                ]["Season"][:4]
             )
-            <= 4
-        ):
-            print("Also inactive-ineligible")
+            + 1
+        )
+        # the check for the difference not being 0 is used in place of is_active column
+        if season - last_season != 0 and season - last_season <= 4:
+            print("\tAlso inactive-ineligible")
             inactive_ineligibles.append(row["full_name"])
 
         # extract the career row by regex, as it position can vary if they player has
         # played for multiple teams in their career
         totals = totals[totals.fillna("")["Season"].str.contains(r"^\d Yrs?$")].iloc[0]
-        avgs = pd.read_html(StringIO(avgs_table.get_attribute("outerHTML")))[0]
-        avgs = avgs[avgs.fillna("")["Season"].str.contains(r"^\d Yrs?$")].iloc[0]
 
-        # if a player has played in the playoffs, he'll have playoff tables as well
+        # if a player has played in the playoffs, he'll have a playoff table as well
         pf_totals_table = driver.find_elements(By.ID, "totals_stats_post")
         has_pf = False
         if len(pf_totals_table) == 1:
-            # if the table exists, Series for playoff totals and averages can be made
+            # if the table exists, a Series for playoff totals can be made
             pf_totals = pd.read_html(
                 StringIO(pf_totals_table[0].get_attribute("outerHTML"))
             )[0]
             pf_totals = pf_totals[
                 pf_totals.fillna("")["Season"].str.contains(r"^\d Yrs?$")
             ].iloc[0]
+            # this is now set to true, so playoff Series can be concatenated later
+            has_pf = True
+        driver.quit()
+
+        # from here, insert_missing will be used to ensure all required columns are
+        # present, and columns will be renamed to align with the rest of the DataFrame
+        totals = insert_missing(totals).rename(br_rename)
+
+        # if the player has played in the playoffs, process their playoff Series also
+        if has_pf:
+            print("\tAlso played in playoffs")
+            pf_totals = insert_missing(pf_totals).rename(br_rename).add_prefix("PF_")  # type: ignore
+            # similar concatenation, just with playoffs included
+            return pd.concat(
+                [
+                    totals[5:14],
+                    totals[18:-2],
+                    pf_totals[5:14],
+                    pf_totals[18:-2],
+                ]
+            )
+
+        # concatenate to ignore irrelevant columns and return that Series
+        return pd.concat([totals[5:14], totals[18:-2]])
+    except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
+        print(f"{row['full_name']} caused a timeout")
+        quit()
+
+    # if the player has no seasons, skip over them; they'll be removed later
+    if len(totals[0]) == 0:
+        print(f"{row['full_name']} never played in the NBA")
+        never_in_nba.append(row["full_name"])
+        return pd.Series()
+
+    # for inactive players, check their last season to determine eligibility
+    if (
+        row["is_active"] == False
+        and season - (int(totals[0].iloc[-1]["SEASON_ID"][:4]) + 1) <= 4
+    ):
+        print(f"{row['full_name']} is inactive-ineligible")
+        inactive_ineligibles.append(row["full_name"])
+
+    # if a player has never played a playoff game, only return their regular season
+    # totals (index 1 in the list)
+    if len(totals[3]) == 0:
+        return totals[1].iloc[0, 3:]
+
+    # otherwise, add in the playoff DataFrame at index 3; iloc and slicing are used
+    # near identical to clean_avgs, but with shooting splits and games played included
+    return pd.concat([totals[1].iloc[0, 3:], totals[3].iloc[0, 3:].add_prefix("PF_")])
+
+
+def get_avgs(row: pd.Series) -> pd.Series:
+    """
+    Uses nba_api to get the career averages for each player for both the regular
+    season and playoffs. Scrapes Basketball Reference when needed and concatenates
+    Series into a Series that is attached to main DataFrame
+
+    :param row: The Series representing a player from the inactive or active Dataframes
+    :type row: pd.Series
+    :return: A formatted Series of the player's career averages
+    :rtype: Series[Any]
+    """
+
+    # calls to get the player's career averages, sleeping to respect the
+    # NBA's rate limiting
+    sleep(10)
+    try:
+        avgs = playercareerstats.PlayerCareerStats(
+            row["id"], per_mode36="PerGame", headers=custom_headers
+        ).get_data_frames()
+    except KeyError:
+        # this and all similar print statements are for my debugging
+        print(f"{row["full_name"]} scraped on BR")
+        # a KeyError will occur if the player's page on nba.com is empty. In this case,
+        # Selenium is needed to manually scrape Basketball Reference to get their
+        # career stats
+        driver = webdriver.Firefox(options=options)
+        driver.install_addon("ublock_origin-1.68.0.xpi")
+
+        # BR organizes players by first letter of last name, so find player in their
+        # corresponding page
+        driver.get(
+            f"https://www.basketball-reference.com/players/{row['last_name'].lower()[0]}/"
+        )
+        player_link = driver.find_element(By.LINK_TEXT, row["full_name"]).get_attribute(
+            "href"
+        )
+        driver.get(player_link)  # type: ignore
+
+        # use IDs to get table for career averages, playoffs not needed yet
+        avgs_table = driver.find_element(By.ID, "per_game_stats")
+        # then convert said table to Series for processing
+        avgs = pd.read_html(StringIO(avgs_table.get_attribute("outerHTML")))[0]
+
+        # extract the career row by regex, as it position can vary if they player has
+        # played for multiple teams in their career
+        avgs = avgs[avgs.fillna("")["Season"].str.contains(r"^\d Yrs?$")].iloc[0]
+
+        # if a player has played in the playoffs, he'll have a playoff table as well
+        pf_avgs_table = driver.find_elements(By.ID, "per_game_stats_post")
+        has_pf = False
+        if len(pf_avgs_table) == 1:
+            # if the table exists, a Series for playoff averages can be made
             pf_avgs = pd.read_html(
-                StringIO(
-                    driver.find_element(By.ID, "per_game_stats_post").get_attribute(
-                        "outerHTML"
-                    )
-                )
+                StringIO(pf_avgs_table[0].get_attribute("outerHTML"))
             )[0]
             pf_avgs = pf_avgs[
                 pf_avgs.fillna("")["Season"].str.contains(r"^\d Yrs?$")
@@ -252,42 +363,21 @@ def get_career_stats(row: pd.Series) -> pd.Series:
             has_pf = True
         driver.quit()
 
-        # used for converting BR column names to NBA.com column names
-        br_rename = {
-            "G": "GP",
-            "MP": "MIN",
-            "FG": "FGM",
-            "FG%": "FG_PCT",
-            "3P": "FG3M",
-            "3P%": "FG3_PCT",
-            "3PA": "FG3A",
-            "FT": "FTM",
-            "FT%": "FT_PCT",
-            "ORB": "OREB",
-            "DRB": "DREB",
-            "TRB": "REB",
-        }
         # from here, insert_missing will be used to ensure all required columns are
         # present, and columns will be renamed to align with the rest of the DataFrame
-        totals = insert_missing(totals).rename(br_rename)
         avgs = insert_missing(avgs).rename(br_rename).rename(rename_avgs)
 
         # if the player has played in the playoffs, process their playoff Series also
         if has_pf:
-            print("Also played in playoffs")
-            pf_totals = insert_missing(pf_totals).rename(br_rename).add_prefix("PF_")  # type: ignore
+            print("\tAlso played in playoffs")
             pf_avgs = insert_missing(pf_avgs).rename(br_rename).rename(rename_avgs).add_prefix("PF_")  # type: ignore
             # similar concatenation, just with playoffs included
             return pd.concat(
                 [
-                    totals[5:14],
-                    totals[18:-2],
                     avgs[7:10],
                     avgs[11:13],
                     avgs[18:20],
                     avgs[21:-1],
-                    pf_totals[5:14],
-                    pf_totals[18:-2],
                     pf_avgs[7:10],
                     pf_avgs[11:13],
                     pf_avgs[18:20],
@@ -295,11 +385,9 @@ def get_career_stats(row: pd.Series) -> pd.Series:
                 ]
             )
 
-        # concatenate the two together like usual, ignoring irrelevant columns
+        # concatenate to ignore irrelevant columns and return the Series
         return pd.concat(
             [
-                totals[5:14],
-                totals[18:-2],
                 avgs[7:10],
                 avgs[11:13],
                 avgs[18:20],
@@ -311,39 +399,19 @@ def get_career_stats(row: pd.Series) -> pd.Series:
         quit()
 
     # if the player has no seasons, skip over them; they'll be removed later
-    if len(totals[0]) == 0:
+    if len(avgs[0]) == 0:
         print(f"{row['full_name']} never played in the NBA")
-        never_in_nba.append(row["full_name"])
         return pd.Series()
 
-    sleep(10)
-    try:
-        avgs = playercareerstats.PlayerCareerStats(
-            row["id"], per_mode36="PerGame", headers=custom_headers
-        ).get_data_frames()
-    except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
-        print(f"{row['full_name']} caused a timeout")
-        quit()
-
-    # for inactive players, check their last season to determine eligibility
-    if (
-        row["is_active"] == False
-        and season - (int(totals[0].iloc[-1]["SEASON_ID"][:4]) + 1) <= 4
-    ):
-        print(f"{row['full_name']} is inactive-ineligible")
-        inactive_ineligibles.append(row["full_name"])
-
     # if a player has never played a playoff game, only return their regular season
-    # totals and averages (index 1 in both lists)
-    if len(totals[3]) == 0:
-        return pd.concat([totals[1].iloc[0, 3:], clean_avgs(avgs[1])])
-    # otherwise, add in the playoff DataFrames at index 3; iloc and slicing are used
-    # near identical to clean_avgs, but with shooting splits and games played included
+    # averages (index 1 in the list)
+    if len(avgs[3]) == 0:
+        return clean_avgs(avgs[1])
+
+    # otherwise, add in the playoff DataFrames at index 3
     return pd.concat(
         [
-            totals[1].iloc[0, 3:],
             clean_avgs(avgs[1]),
-            totals[3].iloc[0, 3:].add_prefix("PF_"),
             clean_avgs(avgs[3]).add_prefix("PF_"),
         ]
     )
@@ -382,11 +450,16 @@ def get_awards(row: pd.Series) -> pd.Series:
 
 
 # for each function, apply will create a DataFrame that can be concatenated row-wise
-print("Begin scraping stats for inactive players...")
-inactives = pd.concat([inactives, inactives.apply(get_career_stats, axis=1)], axis=1)
+print("Begin scraping totals for inactive players...")
+inactives = pd.concat([inactives, inactives.apply(get_totals, axis=1)], axis=1)
 
 # adding an intermediate save to csv file as a fail-safe so I wouldn't have to repeat
 # the entire stats process again in the event of internet going out, etc
+inactives.to_csv("eligible_player_data.csv")
+
+print("Finished scraping totals for inactive players, begin scraping averages")
+inactives = pd.read_csv("eligible_player_data.csv")
+inactives = pd.concat([inactives, inactives.apply(get_avgs, axis=1)], axis=1)
 inactives.to_csv("eligible_player_data.csv")
 
 print("Finished scraping stats for inactive players, begin scraping awards...")
@@ -406,8 +479,12 @@ inactives.drop(inactive_ineligibles_df.index).drop(never_in_nba_df.index).to_csv
 )
 
 # now we'll repeat that whole process for active players
-print("Finished saving inactives df, begin scraping stats for active players...")
-actives = pd.concat([actives, actives.apply(get_career_stats, axis=1)], axis=1)
+print("Finished saving inactives df, begin scraping totals for active players...")
+actives = pd.concat([actives, actives.apply(get_totals, axis=1)], axis=1)
+actives.to_csv("ineligible_player_data.csv")
+print("Finished scraping totals for active players, begin scraping averages")
+actives = pd.read_csv("ineligible_player_data.csv")
+actives = pd.concat([actives, actives.apply(get_avgs, axis=1)], axis=1)
 actives.to_csv("ineligible_player_data.csv")
 print("Finished scraping stats for active players, begin scraping awards...")
 actives = pd.read_csv("ineligible_player_data.csv")
