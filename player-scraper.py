@@ -458,12 +458,12 @@ inactives = pd.concat([inactives, inactives.apply(get_totals, axis=1)], axis=1)
 inactives.to_csv("eligible_player_data.csv")
 
 print("Finished scraping totals for inactive players, begin scraping averages")
-inactives = pd.read_csv("eligible_player_data.csv")
+inactives = pd.read_csv("eligible_player_data.csv", index_col=0)
 inactives = pd.concat([inactives, inactives.apply(get_avgs, axis=1)], axis=1)
 inactives.to_csv("eligible_player_data.csv")
 
 print("Finished scraping stats for inactive players, begin scraping awards...")
-inactives = pd.read_csv("eligible_player_data.csv")
+inactives = pd.read_csv("eligible_player_data.csv", index_col=0)
 inactives = pd.concat([inactives, inactives.apply(get_awards, axis=1)], axis=1).fillna(
     0
 )
@@ -475,7 +475,7 @@ inactive_ineligibles_df = inactives[inactives["full_name"].isin(inactive_ineligi
 never_in_nba_df = inactives[inactives["full_name"].isin(never_in_nba)]
 # that df is then saved to a csv for easy access/to prevent repeated scraping
 inactives.drop(inactive_ineligibles_df.index).drop(never_in_nba_df.index).to_csv(
-    "eligible_player_data.csv"
+    "eligible_player_data.csv", index=False
 )
 
 # now we'll repeat that whole process for active players
@@ -483,13 +483,15 @@ print("Finished saving inactives df, begin scraping totals for active players...
 actives = pd.concat([actives, actives.apply(get_totals, axis=1)], axis=1)
 actives.to_csv("ineligible_player_data.csv")
 print("Finished scraping totals for active players, begin scraping averages")
-actives = pd.read_csv("ineligible_player_data.csv")
+actives = pd.read_csv("ineligible_player_data.csv", index_col=0)
 actives = pd.concat([actives, actives.apply(get_avgs, axis=1)], axis=1)
 actives.to_csv("ineligible_player_data.csv")
 print("Finished scraping stats for active players, begin scraping awards...")
-actives = pd.read_csv("ineligible_player_data.csv")
+actives = pd.read_csv("ineligible_player_data.csv", index_col=0)
 actives = pd.concat([actives, actives.apply(get_awards, axis=1)], axis=1).fillna(0)
 print("Finished scraping awards, begin adding IIs and saving to csv file...")
 
-pd.concat([actives, inactive_ineligibles_df]).to_csv("ineligible_player_data.csv")
+pd.concat([actives, inactive_ineligibles_df]).to_csv(
+    "ineligible_player_data.csv", index=False
+)
 print("Finished scraping!")
