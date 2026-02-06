@@ -3,6 +3,7 @@ from time import sleep
 from datetime import date
 from io import StringIO
 import requests
+import pickle
 
 from nba_api.stats.static import players
 from nba_api.stats.endpoints import playerawards, playercareerstats
@@ -17,11 +18,11 @@ options.add_argument("--headless")
 # get our dataframes of inactive and active player
 inactives = pd.DataFrame(players.get_inactive_players())
 actives = pd.DataFrame(players.get_active_players())
-# this list is used to keep track of players who are inactive, but not long enough to
+# this set is used to keep track of players who are inactive, but not long enough to
 # be HOF-eligible (4 years according to their website)
-inactive_ineligibles = []
+inactive_ineligibles = set()
 # this one is used for G-League players who never played in the NBA but have a page
-never_in_nba = []
+never_in_nba = set()
 
 # minor corrections for players whose names are just wrong, which messes things up
 inactives.loc[inactives["full_name"] == "Cui Cui", "full_name"] = "Cui Yongxi"
@@ -232,7 +233,7 @@ def get_totals(row: pd.Series) -> pd.Series:
         # the check for the difference not being 0 is used in place of is_active column
         if season - last_season != 0 and season - last_season <= 4:
             print("\tAlso inactive-ineligible")
-            inactive_ineligibles.append(row["full_name"])
+            inactive_ineligibles.add(row["full_name"])
 
         # extract the career row by regex, as it position can vary if they player has
         # played for multiple teams in their career
@@ -280,7 +281,7 @@ def get_totals(row: pd.Series) -> pd.Series:
     # if the player has no seasons, skip over them; they'll be removed later
     if len(totals[0]) == 0:
         print(f"{row['full_name']} never played in the NBA")
-        never_in_nba.append(row["full_name"])
+        never_in_nba.add(row["full_name"])
         return pd.Series()
 
     # for inactive players, check their last season to determine eligibility
@@ -289,7 +290,7 @@ def get_totals(row: pd.Series) -> pd.Series:
         and season - (int(totals[0].iloc[-1]["SEASON_ID"][:4]) + 1) <= 4
     ):
         print(f"{row['full_name']} is inactive-ineligible")
-        inactive_ineligibles.append(row["full_name"])
+        inactive_ineligibles.add(row["full_name"])
 
     # if a player has never played a playoff game, only return their regular season
     # totals (index 1 in the list)
@@ -457,6 +458,12 @@ inactives = pd.concat([inactives, inactives.apply(get_totals, axis=1)], axis=1)
 # the entire stats process again in the event of internet going out, etc
 inactives.to_csv("eligible_player_data.csv")
 
+# inactive_ineligible and never_in_nba sets are also saved to files for the same reason
+with open("inactive_ineligibles.pkl", "wb") as file:
+    pickle.dump(inactive_ineligibles, file)
+with open("never_in_nba.pkl", "wb") as file:
+    pickle.dump(never_in_nba, file)
+
 print("Finished scraping totals for inactive players, begin scraping averages")
 inactives = pd.read_csv("eligible_player_data.csv", index_col=0)
 inactives = pd.concat([inactives, inactives.apply(get_avgs, axis=1)], axis=1)
@@ -469,8 +476,16 @@ inactives = pd.concat([inactives, inactives.apply(get_awards, axis=1)], axis=1).
 )
 print("Finished scraping awards, begin removing players and saving to csv file...")
 
+# restore in inactive_ineligibles and never_in_nba from their pickle files
+with open("inactive_ineligibles.pkl", "rb") as file:
+    inactive_ineligibles = pickle.load(file)
+with open("never_in_nba.pkl", "rb") as file:
+    never_in_nba = pickle.load(file)
+
 # use the inactive_ineligible list to remove any of those players from the inactive df
 inactive_ineligibles_df = inactives[inactives["full_name"].isin(inactive_ineligibles)]
+# this one is saved to a file for adding later onto ineligible df
+inactive_ineligibles_df.to_csv("inactive_ineligibles.csv", index=False)
 # similarly, the never_in_nba list is used to remove those players from the inactive df
 never_in_nba_df = inactives[inactives["full_name"].isin(never_in_nba)]
 # that df is then saved to a csv for easy access/to prevent repeated scraping
@@ -490,6 +505,9 @@ print("Finished scraping stats for active players, begin scraping awards...")
 actives = pd.read_csv("ineligible_player_data.csv", index_col=0)
 actives = pd.concat([actives, actives.apply(get_awards, axis=1)], axis=1).fillna(0)
 print("Finished scraping awards, begin adding IIs and saving to csv file...")
+
+# restore inactive_ineligible df to be added onto active df
+inactive_ineligibles_df = pd.read_csv("inactive_ineligibles.csv")
 
 pd.concat([actives, inactive_ineligibles_df]).to_csv(
     "ineligible_player_data.csv", index=False
