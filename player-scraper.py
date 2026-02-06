@@ -450,66 +450,123 @@ def get_awards(row: pd.Series) -> pd.Series:
     return awards.groupby("DESCRIPTION").size()
 
 
-# for each function, apply will create a DataFrame that can be concatenated row-wise
-print("Begin scraping totals for inactive players...")
-inactives = pd.concat([inactives, inactives.apply(get_totals, axis=1)], axis=1)
+def inactive_totals():
+    """
+    Gets total stats for inactive players df and saves it to a csv file to create a
+    checkpoint, along with preserving inactive_ineligibles and never_in_nba sets
+    """
 
-# adding an intermediate save to csv file as a fail-safe so I wouldn't have to repeat
-# the entire stats process again in the event of internet going out, etc
-inactives.to_csv("eligible_player_data.csv")
+    global inactives
+    # for each function, apply will create a DataFrame that can be concatenated on
+    print("Begin scraping totals for inactive players...")
+    inactives = pd.concat([inactives, inactives.apply(get_totals, axis=1)], axis=1)
 
-# inactive_ineligible and never_in_nba sets are also saved to files for the same reason
-with open("inactive_ineligibles.pkl", "wb") as file:
-    pickle.dump(inactive_ineligibles, file)
-with open("never_in_nba.pkl", "wb") as file:
-    pickle.dump(never_in_nba, file)
+    # adding an intermediate save to csv file as a fail-safe so I wouldn't have to
+    # repeat the entire stats process again in the event of internet going out, etc
+    inactives.to_csv("eligible_player_data.csv", index=False)
 
-print("Finished scraping totals for inactive players, begin scraping averages")
-inactives = pd.read_csv("eligible_player_data.csv", index_col=0)
-inactives = pd.concat([inactives, inactives.apply(get_avgs, axis=1)], axis=1)
-inactives.to_csv("eligible_player_data.csv")
+    # inactive_ineligible and never_in_nba sets are saved to files for the same reason
+    with open("inactive_ineligibles.pkl", "wb") as file:
+        pickle.dump(inactive_ineligibles, file)
+    with open("never_in_nba.pkl", "wb") as file:
+        pickle.dump(never_in_nba, file)
 
-print("Finished scraping stats for inactive players, begin scraping awards...")
-inactives = pd.read_csv("eligible_player_data.csv", index_col=0)
-inactives = pd.concat([inactives, inactives.apply(get_awards, axis=1)], axis=1).fillna(
-    0
-)
-print("Finished scraping awards, begin removing players and saving to csv file...")
 
-# restore in inactive_ineligibles and never_in_nba from their pickle files
-with open("inactive_ineligibles.pkl", "rb") as file:
-    inactive_ineligibles = pickle.load(file)
-with open("never_in_nba.pkl", "rb") as file:
-    never_in_nba = pickle.load(file)
+def inactive_avgs():
+    """
+    Restores inactive df from previous checkpoint and adds on average stats before
+    saving for another checkpoint
+    """
 
-# use the inactive_ineligible list to remove any of those players from the inactive df
-inactive_ineligibles_df = inactives[inactives["full_name"].isin(inactive_ineligibles)]
-# this one is saved to a file for adding later onto ineligible df
-inactive_ineligibles_df.to_csv("inactive_ineligibles.csv", index=False)
-# similarly, the never_in_nba list is used to remove those players from the inactive df
-never_in_nba_df = inactives[inactives["full_name"].isin(never_in_nba)]
-# that df is then saved to a csv for easy access/to prevent repeated scraping
-inactives.drop(inactive_ineligibles_df.index).drop(never_in_nba_df.index).to_csv(
-    "eligible_player_data.csv", index=False
-)
+    print("Finished scraping totals for inactive players, begin scraping averages")
+    # inactives in read in after being saved at the previous checkpoint
+    inactives = pd.read_csv("eligible_player_data.csv")
+    inactives = pd.concat([inactives, inactives.apply(get_avgs, axis=1)], axis=1)
+    inactives.to_csv("eligible_player_data.csv", index=False)
 
-# now we'll repeat that whole process for active players
-print("Finished saving inactives df, begin scraping totals for active players...")
-actives = pd.concat([actives, actives.apply(get_totals, axis=1)], axis=1)
-actives.to_csv("ineligible_player_data.csv")
-print("Finished scraping totals for active players, begin scraping averages")
-actives = pd.read_csv("ineligible_player_data.csv", index_col=0)
-actives = pd.concat([actives, actives.apply(get_avgs, axis=1)], axis=1)
-actives.to_csv("ineligible_player_data.csv")
-print("Finished scraping stats for active players, begin scraping awards...")
-actives = pd.read_csv("ineligible_player_data.csv", index_col=0)
-actives = pd.concat([actives, actives.apply(get_awards, axis=1)], axis=1).fillna(0)
-print("Finished scraping awards, begin adding IIs and saving to csv file...")
 
-# restore inactive_ineligible df to be added onto active df
-inactive_ineligibles_df = pd.read_csv("inactive_ineligibles.csv")
+def inactive_awards():
+    """
+    Restores inactive df from previous checkpoint, adds on awards, removes inactive-
+    ineligible and never_in_nba players, and saves it to the final csv
+    """
 
-pd.concat([actives, inactive_ineligibles_df]).to_csv(
-    "ineligible_player_data.csv", index=False
-)
-print("Finished scraping!")
+    print("Finished scraping stats for inactive players, begin scraping awards...")
+    inactives = pd.read_csv("eligible_player_data.csv")
+    inactives = pd.concat(
+        [inactives, inactives.apply(get_awards, axis=1)], axis=1
+    ).fillna(0)
+    print("Finished scraping awards, begin removing players and saving to csv file...")
+
+    # restore inactive_ineligibles and never_in_nba from their pickle files
+    with open("inactive_ineligibles.pkl", "rb") as file:
+        inactive_ineligibles = pickle.load(file)
+    with open("never_in_nba.pkl", "rb") as file:
+        never_in_nba = pickle.load(file)
+
+    # use the ii set to remove any of those players from the inactive df
+    inactive_ineligibles_df = inactives[
+        inactives["full_name"].isin(inactive_ineligibles)
+    ]
+    # this df is saved to a file for adding later onto active df
+    inactive_ineligibles_df.to_csv("inactive_ineligibles.csv", index=False)
+    # the never_in_nba set is used in a similar manner for removal
+    never_in_nba_df = inactives[inactives["full_name"].isin(never_in_nba)]
+    # that df is then saved to a csv for easy access/to prevent repeated scraping
+    inactives.drop(inactive_ineligibles_df.index).drop(never_in_nba_df.index).to_csv(
+        "eligible_player_data.csv", index=False
+    )
+
+
+def active_totals():
+    """
+    Gets total stats for active players df and saves it to a csv file to create a
+    checkpoint
+    """
+
+    global actives
+    print("Finished saving inactives df, begin scraping totals for active players...")
+    actives = pd.concat([actives, actives.apply(get_totals, axis=1)], axis=1)
+    actives.to_csv("ineligible_player_data.csv", index=False)
+
+
+def active_avgs():
+    """
+    Restores active df from previous checkpoint and adds on average stats before
+    saving for another checkpoint
+    """
+
+    print("Finished scraping totals for active players, begin scraping averages")
+    actives = pd.read_csv("ineligible_player_data.csv")
+    actives = pd.concat([actives, actives.apply(get_avgs, axis=1)], axis=1)
+    actives.to_csv("ineligible_player_data.csv", index=False)
+
+
+def active_awards():
+    """
+    Restores active df from previous checkpoint, adds on awards, adds back inactive-
+    ineligible players, and saves it to the final csv
+    """
+
+    print("Finished scraping stats for active players, begin scraping awards...")
+    actives = pd.read_csv("ineligible_player_data.csv")
+    actives = pd.concat([actives, actives.apply(get_awards, axis=1)], axis=1).fillna(0)
+    print("Finished scraping awards, begin adding IIs and saving to csv file...")
+
+    # restore inactive_ineligible df to be added onto active df
+    inactive_ineligibles_df = pd.read_csv("inactive_ineligibles.csv")
+
+    pd.concat([actives, inactive_ineligibles_df]).to_csv(
+        "ineligible_player_data.csv", index=False
+    )
+    print("Finished scraping!")
+
+
+# When arranged into functions like this, it's much easier to comment out a previous
+# checkpoint
+inactive_totals()
+inactive_avgs()
+inactive_awards()
+active_totals()
+active_avgs()
+active_awards()
