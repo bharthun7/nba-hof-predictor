@@ -564,7 +564,7 @@ def active_awards():
 
 # When arranged into functions like this, it's much easier to comment out a previous
 # checkpoint
-inactive_totals()
+# inactive_totals()
 inactive_avgs()
 inactive_awards()
 active_totals()
