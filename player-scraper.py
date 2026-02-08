@@ -204,6 +204,13 @@ def get_totals(row: pd.Series) -> pd.Series:
         # a KeyError will occur if the player's page on nba.com is empty. In this case,
         # Selenium is needed to manually scrape Basketball Reference to get their
         # career stats
+
+        # Except for Alex Antetokounmpo, the only player in the history of the NBA with
+        # a blank page who also never played in the league, so handle him here
+        if row["full_name"] == "Alex Antetokounmpo":
+            print(f"{row['full_name']} never played in the NBA")
+            return pd.Series()
+
         driver = webdriver.Firefox(options=options)
         driver.install_addon("ublock_origin-1.68.0.xpi")
 
@@ -278,10 +285,6 @@ def get_totals(row: pd.Series) -> pd.Series:
     except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
         print(f"{row['full_name']} caused a timeout")
         quit()
-    except NoSuchElementException:
-        print(f"{row['full_name']} never played in the NBA")
-        never_in_nba.add(row["full_name"])
-        return pd.Series()
 
     # if the player has no seasons, skip over them; they'll be removed later
     if len(totals[0]) == 0:
@@ -332,6 +335,11 @@ def get_avgs(row: pd.Series) -> pd.Series:
         # a KeyError will occur if the player's page on nba.com is empty. In this case,
         # Selenium is needed to manually scrape Basketball Reference to get their
         # career stats
+
+        if row["full_name"] == "Alex Antetokounmpo":
+            print(f"{row['full_name']} never played in the NBA")
+            return pd.Series()
+
         driver = webdriver.Firefox(options=options)
         driver.install_addon("ublock_origin-1.68.0.xpi")
 
@@ -403,9 +411,6 @@ def get_avgs(row: pd.Series) -> pd.Series:
     except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
         print(f"{row['full_name']} caused a timeout")
         quit()
-    except NoSuchElementException:
-        print(f"{row['full_name']} never played in the NBA")
-        return pd.Series()
 
     # if the player has no seasons, skip over them; they'll be removed later
     if len(avgs[0]) == 0:
@@ -570,17 +575,17 @@ def active_awards():
     # restore inactive_ineligible df to be added onto active df
     inactive_ineligibles_df = pd.read_csv("inactive_ineligibles.csv")
 
-    pd.concat([actives.drop(never_in_nba_df.index), inactive_ineligibles_df]).to_csv(
-        "ineligible_player_data.csv", index=False
-    )
+    pd.concat([actives.drop(never_in_nba_df.index), inactive_ineligibles_df]).fillna(
+        0
+    ).to_csv("ineligible_player_data.csv", index=False)
     print("Finished scraping!")
 
 
 # When arranged into functions like this, it's much easier to comment out a previous
 # checkpoint
 # inactive_totals()
-inactive_avgs()
-inactive_awards()
+# inactive_avgs()
+# inactive_awards()
 active_totals()
 active_avgs()
 active_awards()
