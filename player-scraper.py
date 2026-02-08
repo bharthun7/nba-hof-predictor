@@ -11,6 +11,7 @@ from nba_api.stats.endpoints import playerawards, playercareerstats
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import NoSuchElementException
 
 options = Options()
 options.add_argument("--headless")
@@ -277,6 +278,10 @@ def get_totals(row: pd.Series) -> pd.Series:
     except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
         print(f"{row['full_name']} caused a timeout")
         quit()
+    except NoSuchElementException:
+        print(f"{row['full_name']} never played in the NBA")
+        never_in_nba.add(row["full_name"])
+        return pd.Series()
 
     # if the player has no seasons, skip over them; they'll be removed later
     if len(totals[0]) == 0:
@@ -398,6 +403,9 @@ def get_avgs(row: pd.Series) -> pd.Series:
     except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
         print(f"{row['full_name']} caused a timeout")
         quit()
+    except NoSuchElementException:
+        print(f"{row['full_name']} never played in the NBA")
+        return pd.Series()
 
     # if the player has no seasons, skip over them; they'll be removed later
     if len(avgs[0]) == 0:
@@ -528,6 +536,8 @@ def active_totals():
     print("Finished saving inactives df, begin scraping totals for active players...")
     actives = pd.concat([actives, actives.apply(get_totals, axis=1)], axis=1)
     actives.to_csv("ineligible_player_data.csv", index=False)
+    with open("never_in_nba.pkl", "wb") as file:
+        pickle.dump(never_in_nba, file)
 
 
 def active_avgs():
@@ -553,10 +563,14 @@ def active_awards():
     actives = pd.concat([actives, actives.apply(get_awards, axis=1)], axis=1).fillna(0)
     print("Finished scraping awards, begin adding IIs and saving to csv file...")
 
+    # remove two-way players from never_in_nba
+    with open("never_in_nba.pkl", "rb") as file:
+        never_in_nba = pickle.load(file)
+    never_in_nba_df = actives[actives["full_name"].isin(never_in_nba)]
     # restore inactive_ineligible df to be added onto active df
     inactive_ineligibles_df = pd.read_csv("inactive_ineligibles.csv")
 
-    pd.concat([actives, inactive_ineligibles_df]).to_csv(
+    pd.concat([actives.drop(never_in_nba_df.index), inactive_ineligibles_df]).to_csv(
         "ineligible_player_data.csv", index=False
     )
     print("Finished scraping!")
