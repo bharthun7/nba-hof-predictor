@@ -11,7 +11,6 @@ from nba_api.stats.endpoints import playerawards, playercareerstats
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
-from selenium.common.exceptions import NoSuchElementException
 
 options = Options()
 options.add_argument("--headless")
@@ -219,9 +218,15 @@ def get_totals(row: pd.Series) -> pd.Series:
         driver.get(
             f"https://www.basketball-reference.com/players/{row['last_name'].lower()[0]}/"
         )
-        player_link = driver.find_element(By.LINK_TEXT, row["full_name"]).get_attribute(
-            "href"
-        )
+        # Some players have duplicate names and need the second entry to be selected
+        if row["full_name"] == "Chris Smith" or row["full_name"] == "Chris Wright":
+            player_link = driver.find_elements(By.LINK_TEXT, row["full_name"])[
+                1
+            ].get_attribute("href")
+        else:
+            player_link = driver.find_element(
+                By.LINK_TEXT, row["full_name"]
+            ).get_attribute("href")
         driver.get(player_link)  # type: ignore
 
         # use ID to get table for career totals, playoffs not needed yet
@@ -348,9 +353,15 @@ def get_avgs(row: pd.Series) -> pd.Series:
         driver.get(
             f"https://www.basketball-reference.com/players/{row['last_name'].lower()[0]}/"
         )
-        player_link = driver.find_element(By.LINK_TEXT, row["full_name"]).get_attribute(
-            "href"
-        )
+        # minor correction for some duplicate names as before
+        if row["full_name"] == "Chris Smith" or row["full_name"] == "Chris Wright":
+            player_link = driver.find_elements(By.LINK_TEXT, row["full_name"])[
+                1
+            ].get_attribute("href")
+        else:
+            player_link = driver.find_element(
+                By.LINK_TEXT, row["full_name"]
+            ).get_attribute("href")
         driver.get(player_link)  # type: ignore
 
         # use IDs to get table for career averages, playoffs not needed yet
