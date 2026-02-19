@@ -1,5 +1,10 @@
 import pandas as pd
 
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+
 # get datasets for eligible and ineligible players from saved csv files
 eligible = pd.read_csv("eligible_player_data.csv")
 ineligible = pd.read_csv("ineligible_player_data.csv")
@@ -117,6 +122,26 @@ ineligible = ineligible.drop(
         "NBA Clutch Player of the Year",
         "NBA Cup Most Valuable Player",
         "NBA Defensive Player of the Month",
+        "Hall of Fame Inductee",
     ],
     axis=1,
 )
+# move HOF to the end for easier model construction
+eligible.insert(
+    len(eligible.columns) - 1,
+    "Hall of Fame Inductee",
+    eligible.pop("Hall of Fame Inductee"),
+)
+
+# separate eligible players into train and test splits
+train, test = train_test_split(eligible)
+
+# create model pipeline with polynomials and scaling followed by model
+pipe = Pipeline(
+    [
+        ("std", StandardScaler()),
+        ("lr", LinearRegression()),
+    ]
+)
+pipe.fit(train.iloc[:, 1:97], train["Hall of Fame Inductee"])
+print(pipe.score(test.iloc[:, 1:97], test["Hall of Fame Inductee"]))
