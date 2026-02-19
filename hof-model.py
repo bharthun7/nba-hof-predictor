@@ -2,7 +2,7 @@ import pandas as pd
 
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.pipeline import Pipeline
 
 # get datasets for eligible and ineligible players from saved csv files
@@ -139,6 +139,7 @@ train, test = train_test_split(eligible)
 # create model pipeline with polynomials and scaling followed by model
 pipe = Pipeline(
     [
+        ("pf", PolynomialFeatures()),
         ("std", StandardScaler()),
         ("lr", LinearRegression()),
     ]
