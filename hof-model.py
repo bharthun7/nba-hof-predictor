@@ -93,3 +93,30 @@ ineligible = pd.concat(
     [ineligible.iloc[:, :5], ineligible.loc[:, stat_order], ineligible.iloc[:, 79:]],
     axis=1,
 )
+
+# drop all personal columns besides full name and any obsolete/irrelevant awards
+drop_columns = [
+    "id",
+    "first_name",
+    "last_name",
+    "is_active",
+    "IBM Award",
+    "J. Walter Kennedy Citizenship",
+    "NBA All-Star Selection",
+    "NBA Comeback Player of the Year",
+    "NBA Sporting News Most Valuable Player of the Year",
+    "NBA Sporting News Rookie of the Year",
+    "NBA Sportsmanship",
+    "Olympic Appearance",
+]
+eligible = eligible.drop(drop_columns, axis=1)
+ineligible = ineligible.drop(
+    drop_columns
+    + [
+        "1st Team NBA Cup All-Tournament Team",
+        "NBA Clutch Player of the Year",
+        "NBA Cup Most Valuable Player",
+        "NBA Defensive Player of the Month",
+    ],
+    axis=1,
+)
