@@ -1,8 +1,8 @@
 import pandas as pd
 
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 
 # get datasets for eligible and ineligible players from saved csv files
@@ -136,13 +136,13 @@ eligible.insert(
 # separate eligible players into train and test splits
 train, test = train_test_split(eligible)
 
-# create model pipeline with polynomials and scaling followed by model
+# create model pipeline with scaling followed by logistic regression model
 pipe = Pipeline(
     [
-        ("pf", PolynomialFeatures()),
         ("std", StandardScaler()),
-        ("lr", LinearRegression()),
+        ("lr", LogisticRegression()),
     ]
 )
+# train the model on eligible players and verify accuracy
 pipe.fit(train.iloc[:, 1:97], train["Hall of Fame Inductee"])
 print(pipe.score(test.iloc[:, 1:97], test["Hall of Fame Inductee"]))
