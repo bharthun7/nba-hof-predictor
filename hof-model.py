@@ -37,7 +37,9 @@ hof_additions = {
     "Paul Westphal",
 }
 hof_removals = {"Reggie Hanson", "Nate Johnston", "Red Dehnert", "John Thompson"}
-
 eligible.loc[eligible["full_name"].isin(hof_additions),"Hall of Fame Inductee"]=1
 eligible.loc[eligible["full_name"].isin(hof_removals),"Hall of Fame Inductee"]=0
-print(eligible[eligible["full_name"]=="Red Dehnert"].iloc[0].to_dict())
+
+#fix Paul Millsap having two 2nd Team All-Rookie awards on nba.com
+ineligible.loc[ineligible["full_name"]=="Paul Millsap","2nd Team All-Rookie Team"]=1
+print(eligible[eligible["full_name"]=="Tim Duncan"].iloc[0].to_dict())
