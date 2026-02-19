@@ -5,6 +5,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 
+import matplotlib.pyplot as plt
+
 # get datasets for eligible and ineligible players from saved csv files
 eligible = pd.read_csv("eligible_player_data.csv")
 ineligible = pd.read_csv("ineligible_player_data.csv")
@@ -146,3 +148,11 @@ pipe = Pipeline(
 # train the model on eligible players and verify accuracy
 pipe.fit(train.iloc[:, 1:97], train["Hall of Fame Inductee"])
 print(pipe.score(test.iloc[:, 1:97], test["Hall of Fame Inductee"]))
+
+importance = pd.DataFrame(
+    {
+        "Feature": eligible.columns[1:97].to_list(),
+        "Coefficient": pipe.steps[1][1].coef_[0],
+    }
+).sort_values("Coefficient")
+print(importance)
