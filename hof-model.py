@@ -2,9 +2,10 @@ import pandas as pd
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, RobustScaler, PolynomialFeatures
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import RFE
+from sklearn.ensemble import RandomForestClassifier
 
 # get datasets for eligible and ineligible players from saved csv files
 eligible = pd.read_csv("eligible_player_data.csv")
@@ -140,8 +141,8 @@ train, test = train_test_split(eligible)
 # create model pipeline with scaling followed by logistic regression model
 pipe = Pipeline(
     [
-        ("std", StandardScaler()),
-        ("rfe", RFE(LogisticRegression(), n_features_to_select=20)),
+        ("ss", StandardScaler()),
+        ("rfe",RFE(LogisticRegression(),n_features_to_select=20))
     ]
 )
 # train the model on eligible players and verify accuracy
@@ -158,7 +159,7 @@ importance = pd.DataFrame(
 with pd.option_context("display.max_rows", None):
     print(importance)
     # use proba to get the probability of classifiction for inelg playere
-    ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[:, 1]
+    ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[:, 1].round(4)
     # print the top 50
     print(
         ineligible.sort_values("HOF Probability", ascending=False).iloc[:50, :][
