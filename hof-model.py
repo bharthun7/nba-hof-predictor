@@ -4,8 +4,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-
-import matplotlib.pyplot as plt
+from sklearn.feature_selection import RFE
 
 # get datasets for eligible and ineligible players from saved csv files
 eligible = pd.read_csv("eligible_player_data.csv")
@@ -142,17 +141,27 @@ train, test = train_test_split(eligible)
 pipe = Pipeline(
     [
         ("std", StandardScaler()),
-        ("lr", LogisticRegression()),
+        ("rfe", RFE(LogisticRegression(), n_features_to_select=20)),
     ]
 )
 # train the model on eligible players and verify accuracy
 pipe.fit(train.iloc[:, 1:97], train["Hall of Fame Inductee"])
 print(pipe.score(test.iloc[:, 1:97], test["Hall of Fame Inductee"]))
 
+# Display importance of features because I'm curious
 importance = pd.DataFrame(
     {
-        "Feature": eligible.columns[1:97].to_list(),
-        "Coefficient": pipe.steps[1][1].coef_[0],
+        "Feature": eligible.columns[1:97][pipe.steps[1][1].get_support()].to_list(),
+        "Coefficient": pipe.steps[1][1].estimator_.coef_[0],
     }
 ).sort_values("Coefficient")
-print(importance)
+with pd.option_context("display.max_rows", None):
+    print(importance)
+    # use proba to get the probability of classifiction for inelg playere
+    ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[:, 1]
+    # print the top 50
+    print(
+        ineligible.sort_values("HOF Probability", ascending=False).iloc[:50, :][
+            ["full_name", "HOF Probability"]
+        ]
+    )
