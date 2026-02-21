@@ -1,5 +1,7 @@
 import pandas as pd
 
+import re
+
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, RobustScaler, PolynomialFeatures
@@ -116,7 +118,8 @@ drop_columns = [
     "NBA Sportsmanship",
     "Olympic Appearance",
 ]
-eligible = eligible.drop(drop_columns, axis=1)
+avg_columns = [col for col in eligible.columns.to_list() if re.match(r"^.*PG$", col)]
+eligible = eligible.drop(drop_columns, axis=1).drop(avg_columns, axis=1)
 ineligible = ineligible.drop(
     drop_columns
     + [
@@ -127,7 +130,7 @@ ineligible = ineligible.drop(
         "Hall of Fame Inductee",
     ],
     axis=1,
-)
+).drop(avg_columns, axis=1)
 # move HOF to the end for easier model construction
 eligible.insert(
     len(eligible.columns) - 1,
@@ -141,10 +144,10 @@ train, test = train_test_split(eligible)
 
 # combine this into function for easy model comparison
 def train_run(pipe: Pipeline):
-    pipe.fit(train.iloc[:, 1:97], train["Hall of Fame Inductee"])
-    print(pipe.score(test.iloc[:, 1:97], test["Hall of Fame Inductee"]))
+    pipe.fit(train.iloc[:, 1:65], train["Hall of Fame Inductee"])
+    print(pipe.score(test.iloc[:, 1:65], test["Hall of Fame Inductee"]))
     with pd.option_context("display.max_rows", None):
-        ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[
+        ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:65])[
             :, 1
         ]
         print(
@@ -154,41 +157,43 @@ def train_run(pipe: Pipeline):
         )
 
 
-scalers = [("std", StandardScaler()), ("rbt", RobustScaler())]
+# narrowed down permutations to these 9 to see how they perform
 models = [
-    ("lr", LogisticRegression()),
-    ("sgd", SGDClassifier(loss="log_loss")),
-    ("rf", RandomForestClassifier()),
-    ("gb", GradientBoostingClassifier()),
+    [("gb", GradientBoostingClassifier())],
+    [("rfe", RFE(estimator=RandomForestClassifier(), n_features_to_select=30))],
+    [("rfe", RFE(estimator=GradientBoostingClassifier(), n_features_to_select=30))],
+    [("std", StandardScaler()), ("gb", GradientBoostingClassifier())],
+    [
+        ("std", StandardScaler()),
+        ("rfe", RFE(estimator=RandomForestClassifier(), n_features_to_select=30)),
+    ],
+    [
+        ("std", StandardScaler()),
+        ("rfe", RFE(estimator=GradientBoostingClassifier(), n_features_to_select=30)),
+    ],
+    [("rbt", RobustScaler()), ("gb", GradientBoostingClassifier())],
+    [
+        ("rbt", RobustScaler()),
+        ("rfe", RFE(estimator=LogisticRegression(), n_features_to_select=30)),
+    ],
+    [
+        ("pf", PolynomialFeatures()),
+        ("std", StandardScaler()),
+        ("gb", GradientBoostingClassifier()),
+    ],
 ]
-# create model pipeline with different preprocessing steps and model
-pipe = Pipeline([])
-mo = 0
-for i in range(2):
-    if i:
-        pipe.steps.append(("pf", PolynomialFeatures()))
-    for j in range(3):
-        if j:
-            pipe.steps.append(scalers[j - 1])
-        for k in range(2):
-            for model in models:
-                if k:
-                    pipe.steps.append(("rfe", RFE(model[1], n_features_to_select=30)))
-                else:
-                    pipe.steps.append(model)
-                mo += 1
-                if mo > 29 and not k:
-                    print(f"MODEL {mo}: {pipe.steps}")
-                    print("/" * 100)
-                    train_run(pipe)
-                pipe.steps.pop()
-                print()
-                print()
-                print()
-        if j:
-            pipe.steps.pop()
-    if i:
-        pipe.steps.pop()
+
+# create pipeline for each model and run it on the same t/t split
+num = 0
+for model in models:
+    pipe = Pipeline(model)
+    num += 1
+    print(f"MODEL {num}: {model}")
+    print("/" * 150)
+    train_run(pipe)
+    print()
+    print()
+    print()
 
 # train the model on eligible players and verify accuracy
 # pipe.fit(train.iloc[:, 1:97], train["Hall of Fame Inductee"])
