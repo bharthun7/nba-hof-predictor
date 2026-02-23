@@ -157,35 +157,39 @@ def train_run(pipe: Pipeline):
         )
 
 
-# narrowed down permutations to these 9 to see how they perform
+# permute all the features to test different models
 models = [
-    [("gb", GradientBoostingClassifier())],
-    [("rfe", RFE(estimator=RandomForestClassifier(), n_features_to_select=30))],
-    [("rfe", RFE(estimator=GradientBoostingClassifier(), n_features_to_select=30))],
-    [("std", StandardScaler()), ("gb", GradientBoostingClassifier())],
-    [
-        ("std", StandardScaler()),
-        ("rfe", RFE(estimator=RandomForestClassifier(), n_features_to_select=30)),
-    ],
-    [
-        ("std", StandardScaler()),
-        ("rfe", RFE(estimator=GradientBoostingClassifier(), n_features_to_select=30)),
-    ],
-    [("rbt", RobustScaler()), ("gb", GradientBoostingClassifier())],
-    [
-        ("rbt", RobustScaler()),
-        ("rfe", RFE(estimator=LogisticRegression(), n_features_to_select=30)),
-    ],
-    [
-        ("pf", PolynomialFeatures()),
-        ("std", StandardScaler()),
-        ("gb", GradientBoostingClassifier()),
-    ],
+    ("lr", LogisticRegression()),
+    ("sgd", SGDClassifier(loss="log_loss")),
+    ("rf", RandomForestClassifier()),
+    ("gb", GradientBoostingClassifier()),
 ]
+scalars = [("std", StandardScaler()), ("rbs", RobustScaler())]
+pipes = []
+current = []
+for i in range(2):
+    if i:
+        current.append(("pf", PolynomialFeatures()))
+    for j in range(3):
+        if j:
+            current.append(scalars[j - 1])
+        for k in range(2):
+            for m in models:
+                if k:
+                    current.append(("rfe", RFE(m[1], n_features_to_select=20)))
+                else:
+                    current.append(m)
+                if not (i and k):
+                    pipes.append(current[:])
+                current.pop()
+        if j:
+            current.pop()
+    if i:
+        current.pop()
 
 # create pipeline for each model and run it on the same t/t split
 num = 0
-for model in models:
+for model in pipes:
     pipe = Pipeline(model)
     num += 1
     print(f"MODEL {num}: {model}")
