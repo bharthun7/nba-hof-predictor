@@ -21,11 +21,9 @@ hof_additions = {
     "Carl Braun",
     "Kobe Bryant",
     "Vince Carter",
-    "Chuck Cooper",
     "Michael Cooper",
     "Bob Dandridge",
     "Walter Davis",
-    "Vlade Divac",
     "Tim Duncan",
     "Kevin Garnett",
     "Pau Gasol",
@@ -33,19 +31,32 @@ hof_additions = {
     "Tim Hardaway",
     "Lou Hudson",
     "Neil Johnston",
-    "Bobby Jones",
-    "Toni Kukoc",
     "Sidney Moncrief",
     "Dirk Nowitzki",
     "Tony Parker",
     "Paul Pierce",
     "Jack Sikma",
-    "Dwayne Wade",
+    "Dwyane Wade",
     "Ben Wallace",
     "Chris Webber",
     "Paul Westphal",
 }
-hof_removals = {"Reggie Hanson", "Nate Johnston", "Red Dehnert", "John Thompson"}
+hof_removals = {
+    "Reggie Hanson",
+    "Nate Johnston",
+    "Red Dehnert",
+    "John Thompson",
+    "Bill Bradley",
+    "Al Cervi",
+    "Bob Houbregs",
+    "Buddy Jeannette",
+    "Sarunas Marciulionis",
+    "Drazen Petrovic",
+    "Dino Radja",
+    "Arvydas Sabonis",
+}
+
+eligible.loc[eligible["id"] == 77193, "Hall of Fame Inductee"] = 1
 eligible.loc[eligible["full_name"].isin(hof_additions), "Hall of Fame Inductee"] = 1
 eligible.loc[eligible["full_name"].isin(hof_removals), "Hall of Fame Inductee"] = 0
 
@@ -119,7 +130,7 @@ drop_columns = [
     "Olympic Appearance",
 ]
 avg_columns = [col for col in eligible.columns.to_list() if re.match(r"^.*PG$", col)]
-eligible = eligible.drop(drop_columns, axis=1).drop(avg_columns, axis=1)
+eligible = eligible.drop(drop_columns, axis=1)
 ineligible = ineligible.drop(
     drop_columns
     + [
@@ -130,7 +141,7 @@ ineligible = ineligible.drop(
         "Hall of Fame Inductee",
     ],
     axis=1,
-).drop(avg_columns, axis=1)
+)
 # move HOF to the end for easier model construction
 eligible.insert(
     len(eligible.columns) - 1,
