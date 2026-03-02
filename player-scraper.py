@@ -77,6 +77,28 @@ custom_headers = {
     "Referer": "https://www.nba.com",
 }
 
+# used to manaully trigger BR scraping on HOFers who've played in the ABA for more
+# accurate predictions
+aba_hof = {
+    "Rick Barry",
+    "Zelmo Beaty",
+    "Billy Cunningham",
+    "Lou Dampier",
+    "Mel Daniels",
+    "Julius Erving",
+    "George Gervin",
+    "Artis Gilmore",
+    "Cliff Hagan",
+    "Connie Hawkins",
+    "Spencer Haywood",
+    "Dan Issel",
+    "Gus Johnson",
+    "Moses Malone",
+    "George McGinnis",
+    "Charlie Scott",
+    "David Thompson",
+}
+
 # used for converting BR column names to NBA.com column names
 br_rename = {
     "G": "GP",
@@ -208,6 +230,10 @@ def get_totals(row: pd.Series) -> pd.Series:
     # NBA's rate limiting
     sleep(10)
     try:
+        # manual trigger to BR scrape if player is an ABA HOFer
+        if row["full_name"] in aba_hof or row["id"] == 77193:
+            print("HOFer played in ABA:")
+            raise KeyError
         totals = playercareerstats.PlayerCareerStats(
             row["id"], headers=custom_headers
         ).get_data_frames()
@@ -345,6 +371,10 @@ def get_avgs(row: pd.Series) -> pd.Series:
     # NBA's rate limiting
     sleep(10)
     try:
+        # manual trigger to BR scrape if player is an ABA HOFer
+        if row["full_name"] in aba_hof or row["id"] == 77193:
+            print("HOFer played in ABA:")
+            raise KeyError
         avgs = playercareerstats.PlayerCareerStats(
             row["id"], per_mode36="PerGame", headers=custom_headers
         ).get_data_frames()
@@ -385,7 +415,7 @@ def get_avgs(row: pd.Series) -> pd.Series:
 
         # extract the career row by regex, as it position can vary if they player has
         # played for multiple teams in their career
-        avgs = avgs[avgs.fillna("")["Season"].str.contains(r"^\d Yrs?$")].iloc[0]
+        avgs = avgs[avgs.fillna("")["Season"].str.contains(r"^\d+ Yrs?$")].iloc[0]
 
         # if a player has played in the playoffs, he'll have a playoff table as well
         pf_avgs_table = driver.find_elements(By.ID, "per_game_stats_post")
@@ -396,7 +426,7 @@ def get_avgs(row: pd.Series) -> pd.Series:
                 StringIO(pf_avgs_table[0].get_attribute("outerHTML"))
             )[0]
             pf_avgs = pf_avgs[
-                pf_avgs.fillna("")["Season"].str.contains(r"^\d Yrs?$")
+                pf_avgs.fillna("")["Season"].str.contains(r"^\d+ Yrs?$")
             ].iloc[0]
             # this is now set to true, so playoff Series can be concatenated later
             has_pf = True
@@ -416,11 +446,11 @@ def get_avgs(row: pd.Series) -> pd.Series:
                     avgs[7:10],
                     avgs[11:13],
                     avgs[18:20],
-                    avgs[21:-1],
+                    avgs[21:-2],
                     pf_avgs[7:10],
                     pf_avgs[11:13],
                     pf_avgs[18:20],
-                    pf_avgs[21:-1],
+                    pf_avgs[21:-2],
                 ]
             )
 
@@ -430,7 +460,7 @@ def get_avgs(row: pd.Series) -> pd.Series:
                 avgs[7:10],
                 avgs[11:13],
                 avgs[18:20],
-                avgs[21:-1],
+                avgs[21:-2],
             ]
         )
     except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
