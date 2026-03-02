@@ -264,7 +264,7 @@ def get_totals(row: pd.Series) -> pd.Series:
 
         # extract the career row by regex, as it position can vary if they player has
         # played for multiple teams in their career
-        totals = totals[totals.fillna("")["Season"].str.contains(r"^\d Yrs?$")].iloc[0]
+        totals = totals[totals.fillna("")["Season"].str.contains(r"^\d+ Yrs?$")].iloc[0]
 
         # if a player has played in the playoffs, he'll have a playoff table as well
         pf_totals_table = driver.find_elements(By.ID, "totals_stats_post")
@@ -275,7 +275,7 @@ def get_totals(row: pd.Series) -> pd.Series:
                 StringIO(pf_totals_table[0].get_attribute("outerHTML"))
             )[0]
             pf_totals = pf_totals[
-                pf_totals.fillna("")["Season"].str.contains(r"^\d Yrs?$")
+                pf_totals.fillna("")["Season"].str.contains(r"^\d+ Yrs?$")
             ].iloc[0]
             # this is now set to true, so playoff Series can be concatenated later
             has_pf = True
