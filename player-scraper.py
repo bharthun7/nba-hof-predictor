@@ -152,6 +152,10 @@ def insert_missing(stats: pd.Series) -> pd.Series:
     :rtype: Series[Any]
     """
 
+    # This is one for ABA players in the HOF whose stats are scraped on BR
+    if "GS" not in stats:
+        stats = pd.concat([stats[:6], pd.Series({"GS": 0}), stats[6:]])
+
     # if 0 FGs were attempted, FG% will be missing along with 2P%, 3P%, and EFG%
     if "FG%" not in stats:
         stats = pd.concat(
@@ -174,6 +178,16 @@ def insert_missing(stats: pd.Series) -> pd.Series:
     # FT attempts is independent of FG attempts but follows same logic
     if "FT%" not in stats:
         stats = pd.concat([stats[:20], pd.Series({"FT%": 0.0}), stats[20:]])
+
+    # Some more ABA-specific ones; ORB and DRB with both either be present or missing
+    if "ORB" not in stats:
+        stats = pd.concat([stats[:21], pd.Series({"ORB": 0, "DRB": 0}), stats[21:]])
+    if "STL" not in stats:
+        stats = pd.concat([stats[:25], pd.Series({"STL": 0}), stats[25:]])
+    if "BLK" not in stats:
+        stats = pd.concat([stats[:26], pd.Series({"BLK": 0}), stats[26:]])
+    if "Trp-Dbl" not in stats:
+        stats = pd.concat([stats[:30], pd.Series({"Trp-Dbl": 0}), stats[30:]])
 
     return stats
 
