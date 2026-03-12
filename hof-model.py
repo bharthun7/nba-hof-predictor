@@ -65,6 +65,139 @@ ineligible.loc[
     ineligible["full_name"] == "Paul Millsap", "2nd Team All-Rookie Team"
 ] = 1
 
+# dictionary used to add in ABA awards for ABA HOFers
+aba_awards = {
+    "Rick Barry": {
+        "1st Team All-NBA": 4,
+        "NBA All-Star": 4,
+    },
+    "Zelmo Beaty": {
+        "NBA Champion": 1,
+        "NBA Finals Most Valuable Player": 1,
+        "2nd Team All-NBA": 2,
+        "NBA All-Star": 3,
+    },
+    "Billy Cunningham": {
+        "NBA Most Valuable Player": 1,
+        "1st Team All-NBA": 1,
+        "NBA All-Star": 1,
+    },
+    "Lou Dampier": {
+        "NBA Champion": 1,
+        "2nd Team All-NBA": 4,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 7,
+    },
+    "Mel Daniels": {
+        "NBA Champion": 3,
+        "NBA Most Valuable Player": 2,
+        "NBA Rookie of the Year": 1,
+        "NBA All-Star Most Valuable Player": 1,
+        "1st Team All-NBA": 4,
+        "2nd Team All-NBA": 1,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 7,
+    },
+    "Julius Erving": {
+        "NBA Champion": 2,
+        "NBA Most Valuable Player": 3,
+        "NBA Finals Most Valuable Player": 2,
+        "1st Team All-NBA": 4,
+        "2nd Team All-NBA": 1,
+        "1st Team All-Defensive Team": 1,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 5,
+    },
+    "George Gervin": {
+        "2nd Team All-NBA": 2,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 3,
+    },
+    "Artis Gilmore": {
+        "NBA Champion": 1,
+        "NBA Most Valuable Player": 1,
+        "NBA Rookie of the Year": 1,
+        "NBA Finals Most Valuable Player": 1,
+        "NBA All-Star Most Valuable Player": 1,
+        "1st Team All-NBA": 5,
+        "1st Team All-Defensive Team": 4,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 5,
+    },
+    "Cliff Hagan": {
+        "NBA All-Star": 1,
+    },
+    "Connie Hawkins": {
+        "NBA Champion": 1,
+        "NBA Most Valuable Player": 1,
+        "NBA Finals Most Valuable Player": 1,
+        "1st Team All-NBA": 2,
+        "NBA All-Star": 2,
+    },
+    "Spencer Haywood": {
+        "NBA Most Valuable Player": 1,
+        "NBA Rookie of the Year": 1,
+        "NBA All-Star Most Valuable Player": 1,
+        "1st Team All-NBA": 1,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 1,
+    },
+    "Dan Issel": {
+        "NBA Champion": 1,
+        "NBA Rookie of the Year": 1,
+        "NBA All-Star Most Valuable Player": 1,
+        "1st Team All-NBA": 1,
+        "2nd Team All-NBA": 4,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 6,
+    },
+    "Gus Johnson": {
+        "NBA Champion": 1,
+    },
+    "Moses Malone": {
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 1,
+    },
+    "George McGinnis": {
+        "NBA Champion": 2,
+        "NBA Most Valuable Player": 1,
+        "NBA Finals Most Valuable Player": 1,
+        "1st Team All-NBA": 2,
+        "2nd Team All-NBA": 1,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 3,
+    },
+    "Charlie Scott": {
+        "NBA Rookie of the Year": 1,
+        "1st Team All-NBA": 1,
+        "2nd Team All-NBA": 1,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 2,
+    },
+    "David Thompson": {
+        "NBA Rookie of the Year": 1,
+        "NBA All-Star Most Valuable Player": 1,
+        "2nd Team All-NBA": 1,
+        "1st Team All-Rookie Team": 1,
+        "NBA All-Star": 1,
+    },
+}
+
+# Bobby Jones has to be looked up by ID because of dupe names
+bobby = {
+    "2nd Team All-NBA": 1,
+    "1st Team All-Defensive Team": 2,
+    "1st Team All-Rookie Team": 1,
+    "NBA All-Star": 1,
+}
+
+# actually adding in the awards
+for player, awards in aba_awards.items():
+    for award, num in awards.items():
+        eligible.loc[eligible["full_name"] == player, award] += num
+for award, num in bobby.items():
+    eligible.loc[eligible["id"] == 77193, award] += num
+
 # reorder columns in a more logical ordering than alphabetical order
 stat_order = [
     "GP",
