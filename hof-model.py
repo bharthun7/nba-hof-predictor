@@ -288,10 +288,10 @@ train, test = train_test_split(eligible)
 
 # combine this into function for easy model comparison
 def train_run(pipe: Pipeline):
-    pipe.fit(train.iloc[:, 1:65], train["Hall of Fame Inductee"])
-    print(pipe.score(test.iloc[:, 1:65], test["Hall of Fame Inductee"]))
+    pipe.fit(train.iloc[:, 1:-1], train["Hall of Fame Inductee"])
+    print(pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"]))
     with pd.option_context("display.max_rows", None):
-        ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:65])[
+        ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[
             :, 1
         ]
         print(
@@ -330,7 +330,10 @@ for i in range(2):
             current.pop()
     if i:
         current.pop()
-
+# pipes=[]
+# for i in range(100,500):
+#     for j in range(5,90,5):
+#         pipes.append([("rs",RobustScaler()),("rfe",RFE(GradientBoostingClassifier(n_estimators=i),n_features_to_select=j))])
 # create pipeline for each model and run it on the same t/t split
 num = 0
 for model in pipes:
