@@ -290,6 +290,12 @@ train, test = train_test_split(eligible)
 def train_run(pipe: Pipeline):
     pipe.fit(train.iloc[:, 1:-1], train["Hall of Fame Inductee"])
     print(pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"]))
+    importance = pd.DataFrame(
+        {
+            "Feature": eligible.columns[1:-1][pipe.steps[1][1].get_support()].to_list(),
+            "Coefficient": pipe.steps[1][1].estimator_.coef_[0],
+        }
+    ).sort_values("Coefficient", key=abs, ascending=False)
     with pd.option_context("display.max_rows", None):
         ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[
             :, 1
@@ -299,6 +305,7 @@ def train_run(pipe: Pipeline):
                 ["full_name", "HOF Probability"]
             ]
         )
+        print(importance)
 
 
 # permute all the features to test different models
@@ -356,13 +363,35 @@ def train_run(pipe: Pipeline):
 #             ),
 #         ]
 #     )
-params=[2,4,8,10,13,17,19,21,23,35]
-pipes=[]
+params = [2, 4, 8, 10, 13, 17, 19, 21, 23, 35]
+pipes = []
 for param in params:
-    if param%2:
-        pipes.append([("rs",RobustScaler()),("rfe",RFE(LogisticRegression(max_iter=200),n_features_to_select=(param+1)/2*5))])
+    if param % 2:
+        pipes.append(
+            [
+                ("rs", RobustScaler()),
+                (
+                    "rfe",
+                    RFE(
+                        LogisticRegression(max_iter=1200),
+                        n_features_to_select=(param + 1) // 2 * 5,
+                    ),
+                ),
+            ]
+        )
     else:
-        pipes.append([("ss",StandardScaler()),("rfe",RFE(LogisticRegression(max_iter=200),n_features_to_select=param/2*5))])
+        pipes.append(
+            [
+                ("ss", StandardScaler()),
+                (
+                    "rfe",
+                    RFE(
+                        LogisticRegression(),
+                        n_features_to_select=param // 2 * 5,
+                    ),
+                ),
+            ]
+        )
 # create pipeline for each model and run it on the same t/t split
 num = 0
 for model in pipes:
