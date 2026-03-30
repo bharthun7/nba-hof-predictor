@@ -302,38 +302,67 @@ def train_run(pipe: Pipeline):
 
 
 # permute all the features to test different models
-models = [
-    ("lr", LogisticRegression()),
-    ("sgd", SGDClassifier(loss="log_loss")),
-    ("rf", RandomForestClassifier()),
-    ("gb", GradientBoostingClassifier()),
-]
-scalars = [("std", StandardScaler()), ("rbs", RobustScaler())]
-pipes = []
-current = []
-for i in range(2):
-    if i:
-        current.append(("pf", PolynomialFeatures()))
-    for j in range(3):
-        if j:
-            current.append(scalars[j - 1])
-        for k in range(2):
-            for m in models:
-                if k:
-                    current.append(("rfe", RFE(m[1], n_features_to_select=20)))
-                else:
-                    current.append(m)
-                if not (i and k):
-                    pipes.append(current[:])
-                current.pop()
-        if j:
-            current.pop()
-    if i:
-        current.pop()
-# pipes=[]
-# for i in range(100,500):
-#     for j in range(5,90,5):
-#         pipes.append([("rs",RobustScaler()),("rfe",RFE(GradientBoostingClassifier(n_estimators=i),n_features_to_select=j))])
+# models = [
+#     ("lr", LogisticRegression()),
+#     #("sgd", SGDClassifier(loss="log_loss")),
+#     #("rf", RandomForestClassifier()),
+#     ("gb", GradientBoostingClassifier()),
+# ]
+# scalars = [("std", StandardScaler()), ("rbs", RobustScaler())]
+# pipes = []
+# current = []
+# for i in range(2):
+#     if i:
+#         current.append(("pf", PolynomialFeatures()))
+#     for j in range(3):
+#         if j:
+#             current.append(scalars[j - 1])
+#         for k in range(2):
+#             for m in models:
+#                 if k:
+#                     current.append(("rfe", RFE(m[1], n_features_to_select=20)))
+#                 else:
+#                     current.append(m)
+#                 if not (i and k):
+#                     pipes.append(current[:])
+#                 current.pop()
+#         if j:
+#             current.pop()
+#     if i:
+#         current.pop()
+# pipes = []
+# for j in range(5, 100, 5):
+#     pipes.append(
+#         [
+#             ("rs", RobustScaler()),
+#             (
+#                 "rfe",
+#                 RFE(
+#                     LogisticRegression(max_iter=500),
+#                     n_features_to_select=j,
+#                 ),
+#             ),
+#         ]
+#     )
+#     pipes.append(
+#         [
+#             ("ss", StandardScaler()),
+#             (
+#                 "rfe",
+#                 RFE(
+#                     LogisticRegression(max_iter=500),
+#                     n_features_to_select=j,
+#                 ),
+#             ),
+#         ]
+#     )
+params=[2,4,8,10,13,17,19,21,23,35]
+pipes=[]
+for param in params:
+    if param%2:
+        pipes.append([("rs",RobustScaler()),("rfe",RFE(LogisticRegression(max_iter=200),n_features_to_select=(param+1)/2*5))])
+    else:
+        pipes.append([("ss",StandardScaler()),("rfe",RFE(LogisticRegression(max_iter=200),n_features_to_select=param/2*5))])
 # create pipeline for each model and run it on the same t/t split
 num = 0
 for model in pipes:
