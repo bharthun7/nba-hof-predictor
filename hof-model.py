@@ -333,8 +333,8 @@ while True:
             n_features = 96
             print("Max features is 96. Number of features set to 96.")
         else:
-            n_featurs = new_nf
-            print(f"Number of features set up to {n_features}.")
+            n_features = new_nf
+            print(f"Number of features set to {n_features}.")
     elif choice == 2:
         print("stat edit")
     elif choice == 3:
