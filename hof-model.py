@@ -310,7 +310,7 @@ n_features = 20
 print("NBA HOF Prediction Model")
 print("/" * 200)
 while True:
-    print("Please make a selection:")
+    print("Please make a selection: ")
     print(f"1. Change number of selected features (currently {n_features})")
     print("2. Edit a player's stats")
     print("3. Run the model")
@@ -319,7 +319,7 @@ while True:
     while choice not in range(1, 5):
         choice = int(input("Invalid selection. Please try again: "))
     if choice == 1:
-        new_nf = int(input("How many features to select? "))
+        new_nf = int(input("Features to select: "))
         while new_nf <= 0:
             new_nf = int(input("Features must be > 0. Please try again: "))
         if new_nf > 96:
@@ -329,9 +329,36 @@ while True:
             n_features = new_nf
             print(f"Number of features set to {n_features}.")
     elif choice == 2:
-        print("stat edit")
+        player = input("Player to modify: ")
+        while (
+            player
+            not in ineligible["full_name"].to_list() + eligible["full_name"].to_list()
+        ):
+            joint_df = pd.concat([eligible, ineligible])
+            split_names = joint_df["full_name"].str.lower().str.split(" ", expand=True)
+            names = player.lower().split(" ")
+            first_matches = joint_df[split_names[0] == names[0]]["full_name"].to_list()
+            last_matches = []
+            if len(names) > 1:
+                last_matches = joint_df[split_names[1] == names[1]][
+                    "full_name"
+                ].to_list()
+            if len(first_matches + last_matches) > 0:
+                print("Not a valid player. Maybe you meant: ")
+                print("\n".join(first_matches + last_matches))
+                player = input("Please try again: ")
+            else:
+                player = input("Not a valid player. Please try again: ")
     elif choice == 3:
-        train_run(Pipeline([("std",StandardScaler()),("kb",SelectKBest(k=n_features)),("lr",LogisticRegression(C=.01,solver="liblinear"))]))
+        train_run(
+            Pipeline(
+                [
+                    ("std", StandardScaler()),
+                    ("kb", SelectKBest(k=n_features)),
+                    ("lr", LogisticRegression(C=0.01, solver="liblinear")),
+                ]
+            )
+        )
     else:
         quit()
     print()
