@@ -2,12 +2,11 @@ import pandas as pd
 
 import re
 
-from sklearn.linear_model import LogisticRegression, SGDClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, RobustScaler, PolynomialFeatures
+from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-from sklearn.feature_selection import RFE
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.feature_selection import SelectKBest
 
 # get datasets for eligible and ineligible players from saved csv files
 eligible = pd.read_csv("eligible_player_data.csv")
@@ -262,7 +261,6 @@ drop_columns = [
     "NBA Sportsmanship",
     "Olympic Appearance",
 ]
-avg_columns = [col for col in eligible.columns.to_list() if re.match(r"^.*PG$", col)]
 eligible = eligible.drop(drop_columns, axis=1)
 ineligible = ineligible.drop(
     drop_columns
@@ -293,7 +291,7 @@ def train_run(pipe: Pipeline):
     importance = pd.DataFrame(
         {
             "Feature": eligible.columns[1:-1][pipe.steps[1][1].get_support()].to_list(),
-            "Coefficient": pipe.steps[1][1].estimator_.coef_[0],
+            "Coefficient": pipe.steps[2][1].coef_[0],
         }
     ).sort_values("Coefficient", key=abs, ascending=False)
     with pd.option_context("display.max_rows", None):
@@ -308,123 +306,40 @@ def train_run(pipe: Pipeline):
         print(importance)
 
 
-# permute all the features to test different models
-# models = [
-#     ("lr", LogisticRegression()),
-#     #("sgd", SGDClassifier(loss="log_loss")),
-#     #("rf", RandomForestClassifier()),
-#     ("gb", GradientBoostingClassifier()),
-# ]
-# scalars = [("std", StandardScaler()), ("rbs", RobustScaler())]
-# pipes = []
-# current = []
-# for i in range(2):
-#     if i:
-#         current.append(("pf", PolynomialFeatures()))
-#     for j in range(3):
-#         if j:
-#             current.append(scalars[j - 1])
-#         for k in range(2):
-#             for m in models:
-#                 if k:
-#                     current.append(("rfe", RFE(m[1], n_features_to_select=20)))
-#                 else:
-#                     current.append(m)
-#                 if not (i and k):
-#                     pipes.append(current[:])
-#                 current.pop()
-#         if j:
-#             current.pop()
-#     if i:
-#         current.pop()
-# pipes = []
-# for j in range(5, 100, 5):
-#     pipes.append(
-#         [
-#             ("rs", RobustScaler()),
-#             (
-#                 "rfe",
-#                 RFE(
-#                     LogisticRegression(max_iter=500),
-#                     n_features_to_select=j,
-#                 ),
-#             ),
-#         ]
-#     )
-#     pipes.append(
-#         [
-#             ("ss", StandardScaler()),
-#             (
-#                 "rfe",
-#                 RFE(
-#                     LogisticRegression(max_iter=500),
-#                     n_features_to_select=j,
-#                 ),
-#             ),
-#         ]
-#     )
-params = [2, 4, 8, 10, 13, 17, 19, 21, 23, 35]
-pipes = []
-for param in params:
-    if param % 2:
-        pipes.append(
-            [
-                ("rs", RobustScaler()),
-                (
-                    "rfe",
-                    RFE(
-                        LogisticRegression(max_iter=1200),
-                        n_features_to_select=(param + 1) // 2 * 5,
-                    ),
-                ),
-            ]
-        )
+n_features = 20
+pipe = Pipeline(
+    [
+        ("std", StandardScaler()),
+        ("kb", SelectKBest(k=n_features)),
+        ("lr", LogisticRegression()),
+    ]
+)
+print("NBA HOF Prediction Model")
+print("/" * 200)
+while True:
+    print("Please make a selection:")
+    print(f"1. Change number of selected features (currently {n_features})")
+    print("2. Edit a player's stats")
+    print("3. Run the model")
+    print("4. Quit")
+    choice = int(input("Selection: "))
+    while choice not in range(1, 5):
+        choice = int(input("Invalid selection. Please try again: "))
+    if choice == 1:
+        new_nf = int(input("How many features to select? "))
+        while new_nf <= 0:
+            new_nf = int(input("Features must be > 0. Please try again: "))
+        if new_nf > 96:
+            n_features = 96
+            print("Max features is 96. Number of features set to 96.")
+        else:
+            n_featurs = new_nf
+            print(f"Number of features set up to {n_features}.")
+    elif choice == 2:
+        print("stat edit")
+    elif choice == 3:
+        print("run model")
     else:
-        pipes.append(
-            [
-                ("ss", StandardScaler()),
-                (
-                    "rfe",
-                    RFE(
-                        LogisticRegression(),
-                        n_features_to_select=param // 2 * 5,
-                    ),
-                ),
-            ]
-        )
-# create pipeline for each model and run it on the same t/t split
-num = 0
-for model in pipes:
-    pipe = Pipeline(model)
-    num += 1
-    print(f"MODEL {num}: {model}")
-    print("/" * 150)
-    train_run(pipe)
+        quit()
     print()
-    print()
-    print()
-
-# train the model on eligible players and verify accuracy
-# pipe.fit(train.iloc[:, 1:97], train["Hall of Fame Inductee"])
-# print(pipe.score(test.iloc[:, 1:97], test["Hall of Fame Inductee"]))
-
-# Display importance of features because I'm curious
-# importance = pd.DataFrame(
-#    {
-#       "Feature": eligible.columns[1:97].to_list(),
-#        "Coefficient": pipe.steps[1][1].feature_importances_,
-#   }
-# ).sort_values("Coefficient")
-
-# with pd.option_context("display.max_rows", None):
-# print(importance)
-# use proba to get the probability of classifiction for inelg playere
-# ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[
-#    :, 1
-# ].round(4)
-# print the top 50
-# print(
-#    ineligible.sort_values("HOF Probability", ascending=False).iloc[:50, :][
-#        ["full_name", "HOF Probability"]
-#    ]
-# )
+train_run(pipe)
