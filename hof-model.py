@@ -305,41 +305,44 @@ def train_run(pipe: Pipeline):
         )
         print(importance)
 
-
-n_features = 20
-pipe = Pipeline(
-    [
-        ("std", StandardScaler()),
-        ("kb", SelectKBest(k=n_features)),
-        ("lr", LogisticRegression()),
-    ]
-)
-print("NBA HOF Prediction Model")
-print("/" * 200)
-while True:
-    print("Please make a selection:")
-    print(f"1. Change number of selected features (currently {n_features})")
-    print("2. Edit a player's stats")
-    print("3. Run the model")
-    print("4. Quit")
-    choice = int(input("Selection: "))
-    while choice not in range(1, 5):
-        choice = int(input("Invalid selection. Please try again: "))
-    if choice == 1:
-        new_nf = int(input("How many features to select? "))
-        while new_nf <= 0:
-            new_nf = int(input("Features must be > 0. Please try again: "))
-        if new_nf > 96:
-            n_features = 96
-            print("Max features is 96. Number of features set to 96.")
-        else:
-            n_features = new_nf
-            print(f"Number of features set to {n_features}.")
-    elif choice == 2:
-        print("stat edit")
-    elif choice == 3:
-        print("run model")
-    else:
-        quit()
-    print()
-train_run(pipe)
+cvals=[.01,.02,.05,.1,.2,.4,.5,.75,1,2,5,10,20,50,100]
+for c in cvals:
+    print(f"C={c}:")
+    train_run(Pipeline([("std",StandardScaler()),("kb",SelectKBest(k=20)),("lr",LogisticRegression(random_state=11,C=c))]))
+# n_features = 20
+# print("NBA HOF Prediction Model")
+# print("/" * 200)
+# while True:
+#     print("Please make a selection:")
+#     print(f"1. Change number of selected features (currently {n_features})")
+#     print("2. Edit a player's stats")
+#     print("3. Run the model")
+#     print("4. Quit")
+#     choice = int(input("Selection: "))
+#     while choice not in range(1, 5):
+#         choice = int(input("Invalid selection. Please try again: "))
+#     if choice == 1:
+#         new_nf = int(input("How many features to select? "))
+#         while new_nf <= 0:
+#             new_nf = int(input("Features must be > 0. Please try again: "))
+#         if new_nf > 96:
+#             n_features = 96
+#             print("Max features is 96. Number of features set to 96.")
+#         else:
+#             n_features = new_nf
+#             print(f"Number of features set to {n_features}.")
+#     elif choice == 2:
+#         print("stat edit")
+#     elif choice == 3:
+#         train_run(
+#             Pipeline(
+#                 [
+#                     ("std", StandardScaler()),
+#                     ("kb", SelectKBest(k=n_features)),
+#                     ("lr", LogisticRegression(solver="liblinear")),
+#                 ]
+#             )
+#         )
+#     else:
+#         quit()
+#     print()
