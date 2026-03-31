@@ -1,7 +1,5 @@
 import pandas as pd
 
-import re
-
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -312,7 +310,7 @@ print("/" * 200)
 while True:
     print("Please make a selection: ")
     print(f"1. Change number of selected features (currently {n_features})")
-    print("2. Edit a player's stats")
+    print("2. Edit an ineligible player's stats")
     print("3. Run the model")
     print("4. Quit")
     choice = int(input("Selection: "))
@@ -332,15 +330,14 @@ while True:
         player = input("Player to modify: ")
         while (
             player
-            not in ineligible["full_name"].to_list() + eligible["full_name"].to_list()
+            not in ineligible["full_name"].to_list()
         ):
-            joint_df = pd.concat([eligible, ineligible])
-            split_names = joint_df["full_name"].str.lower().str.split(" ", expand=True)
+            split_names = ineligible["full_name"].str.lower().str.split(" ", expand=True)
             names = player.lower().split(" ")
-            first_matches = joint_df[split_names[0] == names[0]]["full_name"].to_list()
+            first_matches = ineligible[split_names[0] == names[0]]["full_name"].to_list()
             last_matches = []
             if len(names) > 1:
-                last_matches = joint_df[split_names[1] == names[1]][
+                last_matches = ineligible[split_names[1] == names[1]][
                     "full_name"
                 ].to_list()
             if len(first_matches + last_matches) > 0:
