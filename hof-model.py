@@ -305,10 +305,8 @@ def train_run(pipe: Pipeline):
         )
         print(importance)
 
-cvals=[.01,.02,.05,.1,.2,.4,.5,.75,1,2,5,10,20,50,100]
-for c in cvals:
-    print(f"C={c}:")
-    train_run(Pipeline([("std",StandardScaler()),("kb",SelectKBest(k=20)),("lr",LogisticRegression(random_state=11,C=c))]))
+
+train_run(Pipeline([("std",StandardScaler()),("kb",SelectKBest(k=20)),("lr",LogisticRegression(random_state=27,C=.01,solver="liblinear"))]))
 # n_features = 20
 # print("NBA HOF Prediction Model")
 # print("/" * 200)
