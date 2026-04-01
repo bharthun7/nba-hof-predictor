@@ -307,6 +307,8 @@ def train_run(pipe: Pipeline):
 n_features = 20
 print("NBA HOF Prediction Model")
 print("/" * 200)
+print(ineligible.groupby("full_name").get_group("Johnny Davis"))
+print(ineligible[ineligible["full_name"]=="Johnny Davis"])
 while True:
     print("Please make a selection: ")
     print(f"1. Change number of selected features (currently {n_features})")
@@ -346,6 +348,7 @@ while True:
                 player = input("Please try again: ")
             else:
                 player = input("Not a valid player. Please try again: ")
+        player_row=ineligible[ineligible["full_name"]=="player"]
     elif choice == 3:
         train_run(
             Pipeline(

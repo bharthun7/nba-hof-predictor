@@ -286,7 +286,7 @@ def get_totals(row: pd.Series) -> pd.Series:
         # the check for the difference not being 0 is used in place of is_active column
         if season - last_season != 0 and season - last_season <= 4:
             print("\tAlso inactive-ineligible")
-            inactive_ineligibles.add(row["full_name"])
+            inactive_ineligibles.add(row["id"])
 
         # extract the career row by regex, as it position can vary if they player has
         # played for multiple teams in their career
@@ -343,7 +343,7 @@ def get_totals(row: pd.Series) -> pd.Series:
         and season - (int(totals[0].iloc[-1]["SEASON_ID"][:4]) + 1) <= 4
     ):
         print(f"{row['full_name']} is inactive-ineligible")
-        inactive_ineligibles.add(row["full_name"])
+        inactive_ineligibles.add(row["id"])
 
     # if a player has never played a playoff game, only return their regular season
     # totals (index 1 in the list)
@@ -573,9 +573,7 @@ def inactive_awards():
         never_in_nba = pickle.load(file)
 
     # use the ii set to remove any of those players from the inactive df
-    inactive_ineligibles_df = inactives[
-        inactives["full_name"].isin(inactive_ineligibles)
-    ]
+    inactive_ineligibles_df = inactives[inactives["id"].isin(inactive_ineligibles)]
     # this df is saved to a file for adding later onto active df
     inactive_ineligibles_df.to_csv("inactive_ineligibles.csv", index=False)
     # the never_in_nba set is used in a similar manner for removal
