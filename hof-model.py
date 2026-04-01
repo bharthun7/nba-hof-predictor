@@ -307,8 +307,6 @@ def train_run(pipe: Pipeline):
 n_features = 20
 print("NBA HOF Prediction Model")
 print("/" * 200)
-print(ineligible.groupby("full_name").get_group("Johnny Davis"))
-print(ineligible[ineligible["full_name"]=="Johnny Davis"])
 while True:
     print("Please make a selection: ")
     print(f"1. Change number of selected features (currently {n_features})")
@@ -330,13 +328,14 @@ while True:
             print(f"Number of features set to {n_features}.")
     elif choice == 2:
         player = input("Player to modify: ")
-        while (
-            player
-            not in ineligible["full_name"].to_list()
-        ):
-            split_names = ineligible["full_name"].str.lower().str.split(" ", expand=True)
+        while player not in ineligible["full_name"].to_list():
+            split_names = (
+                ineligible["full_name"].str.lower().str.split(" ", expand=True)
+            )
             names = player.lower().split(" ")
-            first_matches = ineligible[split_names[0] == names[0]]["full_name"].to_list()
+            first_matches = ineligible[split_names[0] == names[0]][
+                "full_name"
+            ].to_list()
             last_matches = []
             if len(names) > 1:
                 last_matches = ineligible[split_names[1] == names[1]][
@@ -348,7 +347,22 @@ while True:
                 player = input("Please try again: ")
             else:
                 player = input("Not a valid player. Please try again: ")
-        player_row=ineligible[ineligible["full_name"]=="player"]
+        print("Modifiable Stats:")
+        for num, stat in enumerate(ineligible.columns.to_list()[1:97]):
+            print(f"{num+1}. {stat}")
+        stat_choice = int(input("Stat to modify: "))
+        while stat_choice < 1 or stat_choice > 96:
+            stat_choice = int(input("Invalid choice. Please try again: "))
+        stat_column = ineligible.columns.to_list()[stat_choice]
+        new_val = int(
+            input(
+                f"New value for {player} {stat_column} (currently {ineligible[ineligible['full_name']==player][stat_column].iloc[0]}): "
+            )
+        )
+        while new_val < 0:
+            new_val = int(input("Value cannot be negative. Please try again: "))
+        print(f"{player} {stat_column} set to {new_val}.")
+        ineligible.loc[ineligible["full_name"] == player, stat_column] = new_val
     elif choice == 3:
         train_run(
             Pipeline(
@@ -361,4 +375,4 @@ while True:
         )
     else:
         quit()
-    print()
+    print("/" * 200)
