@@ -278,6 +278,25 @@ eligible.insert(
     eligible.pop("Hall of Fame Inductee"),
 )
 
+
+def player_selection(prompt):
+    player = input(f"{prompt}: ")
+    while player not in ineligible["full_name"].to_list():
+        split_names = ineligible["full_name"].str.lower().str.split(" ", expand=True)
+        names = player.lower().split(" ")
+        first_matches = ineligible[split_names[0] == names[0]]["full_name"].to_list()
+        last_matches = []
+        if len(names) > 1:
+            last_matches = ineligible[split_names[1] == names[1]]["full_name"].to_list()
+        if len(first_matches + last_matches) > 0:
+            print("Not a valid player. Maybe you meant: ")
+            print("\n".join(first_matches + last_matches))
+            player = input("Please try again: ")
+        else:
+            player = input("Not a valid player. Please try again: ")
+    return player
+
+
 # separate eligible players into train and test splits
 train, test = train_test_split(eligible)
 
@@ -304,26 +323,7 @@ while True:
             n_features = new_nf
             print(f"Number of features set to {n_features}.")
     elif choice == 2:
-        player = input("Player to modify: ")
-        while player not in ineligible["full_name"].to_list():
-            split_names = (
-                ineligible["full_name"].str.lower().str.split(" ", expand=True)
-            )
-            names = player.lower().split(" ")
-            first_matches = ineligible[split_names[0] == names[0]][
-                "full_name"
-            ].to_list()
-            last_matches = []
-            if len(names) > 1:
-                last_matches = ineligible[split_names[1] == names[1]][
-                    "full_name"
-                ].to_list()
-            if len(first_matches + last_matches) > 0:
-                print("Not a valid player. Maybe you meant: ")
-                print("\n".join(first_matches + last_matches))
-                player = input("Please try again: ")
-            else:
-                player = input("Not a valid player. Please try again: ")
+        player = player_selection("Player to modify")
         print("Modifiable Stats:")
         for num, stat in enumerate(ineligible.columns.to_list()[1:97]):
             print(f"{num+1}. {stat}")
@@ -377,12 +377,13 @@ while True:
             print(importance.to_string(index=False))
         elif choice == 3:
             print(
-                ineligible.sort_values("HOF Probability", ascending=False).iloc[:30, :][
-                    ["full_name", "HOF Probability"]
-                ].to_string(index=False,float_format=lambda x:f"{x*100:.2f}%")
+                ineligible.sort_values("HOF Probability", ascending=False)
+                .iloc[:30, :][["full_name", "HOF Probability"]]
+                .to_string(index=False, float_format=lambda x: f"{x*100:.2f}%")
             )
         elif choice == 4:
-            pass
+            player=player_selection("Player to look up")
+            print(f"{player} has a {ineligible[ineligible['full_name']==player]["HOF Probability"].iloc[0]*100:.2f}% chance of making the HOF.")
     else:
         quit()
     print("/" * 200)
