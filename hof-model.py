@@ -281,38 +281,15 @@ eligible.insert(
 # separate eligible players into train and test splits
 train, test = train_test_split(eligible)
 
-
-# combine this into function for easy model comparison
-def train_run(pipe: Pipeline):
-    pipe.fit(train.iloc[:, 1:-1], train["Hall of Fame Inductee"])
-    print(pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"]))
-    importance = pd.DataFrame(
-        {
-            "Feature": eligible.columns[1:-1][pipe.steps[1][1].get_support()].to_list(),
-            "Coefficient": pipe.steps[2][1].coef_[0],
-        }
-    ).sort_values("Coefficient", key=abs, ascending=False)
-    with pd.option_context("display.max_rows", None):
-        ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[
-            :, 1
-        ]
-        print(
-            ineligible.sort_values("HOF Probability", ascending=False).iloc[:50, :][
-                ["full_name", "HOF Probability"]
-            ]
-        )
-        print(importance)
-
-
 n_features = 20
 print("NBA HOF Prediction Model")
 print("/" * 200)
 while True:
     print("Please make a selection: ")
-    print(f"1. Change number of selected features (currently {n_features})")
-    print("2. Edit an ineligible player's stats")
-    print("3. Run the model")
-    print("4. Quit")
+    print(f"1. Change number of selected features (currently {n_features}).")
+    print("2. Edit an ineligible player's stats.")
+    print("3. Run the model.")
+    print("4. Quit.")
     choice = int(input("Selection: "))
     while choice not in range(1, 5):
         choice = int(input("Invalid selection. Please try again: "))
@@ -364,15 +341,50 @@ while True:
         print(f"{player} {stat_column} set to {new_val}.")
         ineligible.loc[ineligible["full_name"] == player, stat_column] = new_val
     elif choice == 3:
-        train_run(
-            Pipeline(
-                [
-                    ("std", StandardScaler()),
-                    ("kb", SelectKBest(k=n_features)),
-                    ("lr", LogisticRegression(C=0.01, solver="liblinear")),
+        pipe = Pipeline(
+            [
+                ("std", StandardScaler()),
+                ("kb", SelectKBest(k=n_features)),
+                ("lr", LogisticRegression(C=0.01, solver="liblinear")),
+            ]
+        )
+        pipe.fit(train.iloc[:, 1:-1], train["Hall of Fame Inductee"])
+        print("Finished fitting model. What would you like to do?")
+        print("1. View model score.")
+        print("2. View feature coefficients.")
+        print("3. View top 25 highest-probability players.")
+        print("4. Lookup a player's probability.")
+        print("5. Exit back to main menu.")
+        choice = int(input("Selection: "))
+        while choice not in range(1, 6):
+            choice = int(input("Invalid selection. Please try again: "))
+        if choice==1:
+            pass
+        elif choice==2:
+            pass
+        elif choice==3:
+            pass
+        elif choice==4:
+            pass
+        print(pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"]))
+        importance = pd.DataFrame(
+            {
+                "Feature": eligible.columns[1:-1][
+                    pipe.steps[1][1].get_support()
+                ].to_list(),
+                "Coefficient": pipe.steps[2][1].coef_[0],
+            }
+        ).sort_values("Coefficient", key=abs, ascending=False)
+        with pd.option_context("display.max_rows", None):
+            ineligible["HOF Probability"] = pipe.predict_proba(
+                ineligible.iloc[:, 1:97]
+            )[:, 1]
+            print(
+                ineligible.sort_values("HOF Probability", ascending=False).iloc[:50, :][
+                    ["full_name", "HOF Probability"]
                 ]
             )
-        )
+            print(importance)
     else:
         quit()
     print("/" * 200)
