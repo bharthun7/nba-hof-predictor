@@ -1,8 +1,9 @@
 import pandas as pd
+import requests
+
 from time import sleep
 from datetime import date
 from io import StringIO
-import requests
 import pickle
 
 from nba_api.stats.static import players
@@ -243,12 +244,6 @@ def get_totals(row: pd.Series) -> pd.Series:
         # a KeyError will occur if the player's page on nba.com is empty. In this case,
         # Selenium is needed to manually scrape Basketball Reference to get their
         # career stats
-
-        # Except for Alex Antetokounmpo, the only player in the history of the NBA with
-        # a blank page who also never played in the league, so handle him here
-        if row["full_name"] == "Alex Antetokounmpo":
-            print(f"{row['full_name']} never played in the NBA")
-            return pd.Series()
 
         driver = webdriver.Firefox(options=options)
         driver.install_addon("ublock_origin-1.68.0.xpi")

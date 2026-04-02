@@ -313,14 +313,24 @@ while True:
     print("3. Run the model.")
     print("4. Quit.")
     print()
-    choice = int(input("Selection: "))
-    while choice not in range(1, 5):
-        choice = int(input("Invalid selection. Please try again: "))
+    while True:
+        try:
+            choice = int(input("Selection: "))
+            if choice  in range(1, 5):
+                break
+            print("Invalid selection. Please try again. ",end="")
+        except ValueError:
+            print("Invalid selection. Please try again. ",end="")
     if choice == 1:
         print()
-        new_nf = int(input("Features to select: "))
-        while new_nf <= 0:
-            new_nf = int(input("Features must be > 0. Please try again: "))
+        while True:
+            try:
+                new_nf = int(input("Features to select: "))
+                if new_nf > 0:
+                    break
+                print("Features must be > 0. Please try again. ",end="")
+            except ValueError:
+                print("Features must be numeric. Please try again. ",end="")
         print()
         if new_nf > 96:
             n_features = 96
@@ -337,18 +347,28 @@ while True:
         for num, stat in enumerate(ineligible.columns.to_list()[1:97]):
             print(f"{num+1}. {stat}")
         print()
-        stat_choice = int(input("Stat to modify: "))
-        while stat_choice < 1 or stat_choice > 96:
-            stat_choice = int(input("Invalid choice. Please try again: "))
+        while True:
+            try:
+                stat_choice = int(input("Stat to modify: "))
+                if stat_choice in range(1,97):
+                    break
+                print("Invalid choice. Please try again: ",end="")
+            except ValueError:
+                print("Invalid choice. Please try again: ",end="")
         stat_column = ineligible.columns.to_list()[stat_choice]
         print()
-        new_val = int(
-            input(
-                f"New value for {player} {stat_column} (currently {ineligible[ineligible['full_name']==player][stat_column].iloc[0]}): "
-            )
-        )
-        while new_val < 0:
-            new_val = int(input("Value cannot be negative. Please try again: "))
+        while True:
+            try:
+                new_val = int(
+                    input(
+                        f"New value for {player} {stat_column} (currently {ineligible[ineligible['full_name']==player][stat_column].iloc[0]}): "
+                    )
+                )
+                if new_val >= 0:
+                    break
+                print("Value cannot be negative. Please try again: ",end="")
+            except ValueError:
+                print("Value must be numeric. Please try again: ",end="")
         print()
         print(f"{player} {stat_column} set to {new_val}.")
         print()
@@ -376,9 +396,14 @@ while True:
             print("4. Lookup a player's probability.")
             print("5. Exit back to main menu.")
             print()
-            choice = int(input("Selection: "))
-            while choice not in range(1, 6):
-                choice = int(input("Invalid selection. Please try again: "))
+            while True:
+                try:
+                    choice = int(input("Selection: "))
+                    if choice  in range(1, 6):
+                        break
+                    print("Invalid selection. Please try again. ",end="")
+                except ValueError:
+                    print("Invalid selection. Please try again. ",end="")
             if choice == 1:
                 print()
                 print(
@@ -399,9 +424,14 @@ while True:
                 print()
             elif choice == 3:
                 print()
-                n_players = int(input("Number of players to display: "))
-                while n_players <= 0:
-                    n_players = int(input("Players must be > 0. Please try again: "))
+                while True:
+                    try:
+                        n_players = int(input("Number of players to display: "))
+                        if n_players > 0:
+                            break
+                        print("Players must be > 0. Please try again: ",end="")
+                    except ValueError:
+                        print("Players must be numeric. Please try again: ",end="")
                 print()
                 if n_players > 997:
                     n_players = 997
