@@ -289,8 +289,10 @@ def player_selection(prompt):
         if len(names) > 1:
             last_matches = ineligible[split_names[1] == names[1]]["full_name"].to_list()
         if len(first_matches + last_matches) > 0:
+            print()
             print("Not a valid player. Maybe you meant: ")
             print("\n".join(first_matches + last_matches))
+            print()
             player = input("Please try again: ")
         else:
             player = input("Not a valid player. Please try again: ")
@@ -305,32 +307,41 @@ print("NBA HOF Prediction Model")
 print("/" * 200)
 while True:
     print("Please make a selection: ")
+    print()
     print(f"1. Change number of selected features (currently {n_features}).")
     print("2. Edit an ineligible player's stats.")
     print("3. Run the model.")
     print("4. Quit.")
+    print()
     choice = int(input("Selection: "))
     while choice not in range(1, 5):
         choice = int(input("Invalid selection. Please try again: "))
     if choice == 1:
+        print()
         new_nf = int(input("Features to select: "))
         while new_nf <= 0:
             new_nf = int(input("Features must be > 0. Please try again: "))
+        print()
         if new_nf > 96:
             n_features = 96
             print("Max features is 96. Number of features set to 96.")
         else:
             n_features = new_nf
             print(f"Number of features set to {n_features}.")
+        print()
     elif choice == 2:
+        print()
         player = player_selection("Player to modify")
+        print()
         print("Modifiable Stats:")
         for num, stat in enumerate(ineligible.columns.to_list()[1:97]):
             print(f"{num+1}. {stat}")
+        print()
         stat_choice = int(input("Stat to modify: "))
         while stat_choice < 1 or stat_choice > 96:
             stat_choice = int(input("Invalid choice. Please try again: "))
         stat_column = ineligible.columns.to_list()[stat_choice]
+        print()
         new_val = int(
             input(
                 f"New value for {player} {stat_column} (currently {ineligible[ineligible['full_name']==player][stat_column].iloc[0]}): "
@@ -338,9 +349,12 @@ while True:
         )
         while new_val < 0:
             new_val = int(input("Value cannot be negative. Please try again: "))
+        print()
         print(f"{player} {stat_column} set to {new_val}.")
+        print()
         ineligible.loc[ineligible["full_name"] == player, stat_column] = new_val
     elif choice == 3:
+        print()
         pipe = Pipeline(
             [
                 ("std", StandardScaler()),
@@ -352,38 +366,70 @@ while True:
         ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[
             :, 1
         ]
-        print("Finished fitting model. What would you like to do?")
-        print("1. View model score.")
-        print("2. View feature coefficients.")
-        print("3. View top 30 highest-probability players.")
-        print("4. Lookup a player's probability.")
-        print("5. Exit back to main menu.")
-        choice = int(input("Selection: "))
-        while choice not in range(1, 6):
-            choice = int(input("Invalid selection. Please try again: "))
-        if choice == 1:
-            print(
-                f"{pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"])*100:.2f}%"
-            )
-        elif choice == 2:
-            importance = pd.DataFrame(
-                {
-                    "Feature": eligible.columns[1:-1][
-                        pipe.steps[1][1].get_support()
-                    ].to_list(),
-                    "Coefficient": pipe.steps[2][1].coef_[0],
-                }
-            ).sort_values("Coefficient", key=abs, ascending=False)
-            print(importance.to_string(index=False))
-        elif choice == 3:
-            print(
-                ineligible.sort_values("HOF Probability", ascending=False)
-                .iloc[:30, :][["full_name", "HOF Probability"]]
-                .to_string(index=False, float_format=lambda x: f"{x*100:.2f}%")
-            )
-        elif choice == 4:
-            player=player_selection("Player to look up")
-            print(f"{player} has a {ineligible[ineligible['full_name']==player]["HOF Probability"].iloc[0]*100:.2f}% chance of making the HOF.")
+        print("Finished fitting model. ", end="")
+        while True:
+            print("What would you like to do?")
+            print()
+            print("1. View model accuracy.")
+            print("2. View feature coefficients.")
+            print("3. View highest-probability players.")
+            print("4. Lookup a player's probability.")
+            print("5. Exit back to main menu.")
+            print()
+            choice = int(input("Selection: "))
+            while choice not in range(1, 6):
+                choice = int(input("Invalid selection. Please try again: "))
+            if choice == 1:
+                print()
+                print(
+                    f"Model Accuracy: {pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"])*100:.2f}%"
+                )
+                print()
+            elif choice == 2:
+                importance = pd.DataFrame(
+                    {
+                        "Feature": eligible.columns[1:-1][
+                            pipe.steps[1][1].get_support()
+                        ].to_list(),
+                        "Coefficient": pipe.steps[2][1].coef_[0],
+                    }
+                ).sort_values("Coefficient", key=abs, ascending=False)
+                print()
+                print(importance.to_string(index=False))
+                print()
+            elif choice == 3:
+                print()
+                n_players = int(input("Number of players to display: "))
+                while n_players <= 0:
+                    n_players = int(input("Players must be > 0. Please try again: "))
+                print()
+                if n_players > 997:
+                    n_players = 997
+                    print("Max players is 997. ", end="")
+                print(
+                    f"Displaying top {n_players} players with highest HOF-probability:"
+                )
+                print()
+                print(
+                    ineligible.sort_values("HOF Probability", ascending=False)
+                    .iloc[:n_players, :][["full_name", "HOF Probability"]]
+                    .to_string(
+                        header=["Player", "HOF Probability"],
+                        index=False,
+                        float_format=lambda x: f"{x*100:.2f}%",
+                    )
+                )
+                print()
+            elif choice == 4:
+                print()
+                player = player_selection("Player to look up")
+                print()
+                print(
+                    f"{player} has a {ineligible[ineligible['full_name']==player]["HOF Probability"].iloc[0]*100:.2f}% chance of making the HOF."
+                )
+                print()
+            else:
+                break
     else:
         quit()
     print("/" * 200)
