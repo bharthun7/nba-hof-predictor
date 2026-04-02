@@ -355,14 +355,16 @@ while True:
         print("Finished fitting model. What would you like to do?")
         print("1. View model score.")
         print("2. View feature coefficients.")
-        print("3. View top 25 highest-probability players.")
+        print("3. View top 30 highest-probability players.")
         print("4. Lookup a player's probability.")
         print("5. Exit back to main menu.")
         choice = int(input("Selection: "))
         while choice not in range(1, 6):
             choice = int(input("Invalid selection. Please try again: "))
         if choice == 1:
-            print(f"{pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"])*100:.2f}%")
+            print(
+                f"{pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"])*100:.2f}%"
+            )
         elif choice == 2:
             importance = pd.DataFrame(
                 {
@@ -374,15 +376,13 @@ while True:
             ).sort_values("Coefficient", key=abs, ascending=False)
             print(importance.to_string(index=False))
         elif choice == 3:
-            pass
+            print(
+                ineligible.sort_values("HOF Probability", ascending=False).iloc[:30, :][
+                    ["full_name", "HOF Probability"]
+                ].to_string(index=False,float_format=lambda x:f"{x*100:.2f}%")
+            )
         elif choice == 4:
             pass
-        with pd.option_context("display.max_rows", None):
-            print(
-                ineligible.sort_values("HOF Probability", ascending=False).iloc[:50, :][
-                    ["full_name", "HOF Probability"]
-                ]
-            )
     else:
         quit()
     print("/" * 200)
