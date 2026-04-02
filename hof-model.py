@@ -349,6 +349,9 @@ while True:
             ]
         )
         pipe.fit(train.iloc[:, 1:-1], train["Hall of Fame Inductee"])
+        ineligible["HOF Probability"] = pipe.predict_proba(ineligible.iloc[:, 1:97])[
+            :, 1
+        ]
         print("Finished fitting model. What would you like to do?")
         print("1. View model score.")
         print("2. View feature coefficients.")
@@ -358,33 +361,28 @@ while True:
         choice = int(input("Selection: "))
         while choice not in range(1, 6):
             choice = int(input("Invalid selection. Please try again: "))
-        if choice==1:
+        if choice == 1:
+            print(f"{pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"])*100:.2f}%")
+        elif choice == 2:
+            importance = pd.DataFrame(
+                {
+                    "Feature": eligible.columns[1:-1][
+                        pipe.steps[1][1].get_support()
+                    ].to_list(),
+                    "Coefficient": pipe.steps[2][1].coef_[0],
+                }
+            ).sort_values("Coefficient", key=abs, ascending=False)
+            print(importance.to_string(index=False))
+        elif choice == 3:
             pass
-        elif choice==2:
+        elif choice == 4:
             pass
-        elif choice==3:
-            pass
-        elif choice==4:
-            pass
-        print(pipe.score(test.iloc[:, 1:-1], test["Hall of Fame Inductee"]))
-        importance = pd.DataFrame(
-            {
-                "Feature": eligible.columns[1:-1][
-                    pipe.steps[1][1].get_support()
-                ].to_list(),
-                "Coefficient": pipe.steps[2][1].coef_[0],
-            }
-        ).sort_values("Coefficient", key=abs, ascending=False)
         with pd.option_context("display.max_rows", None):
-            ineligible["HOF Probability"] = pipe.predict_proba(
-                ineligible.iloc[:, 1:97]
-            )[:, 1]
             print(
                 ineligible.sort_values("HOF Probability", ascending=False).iloc[:50, :][
                     ["full_name", "HOF Probability"]
                 ]
             )
-            print(importance)
     else:
         quit()
     print("/" * 200)
