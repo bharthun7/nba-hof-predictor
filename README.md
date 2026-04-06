@@ -108,14 +108,14 @@ With all the players removed, the underlying theme was that if I were fitting a 
 
 ## How to Run the Model Yourself
 
-The `hof-model.py` file can be run from the command line, and is an interactive program that allows the user to edit a player's stats, change the number of features predicted on, run the model, and view various parts of its output. To run it, you will need Python installed along with the following libraries:
+The `hof_model.py` file can be run from the command line, and is an interactive program that allows the user to edit a player's stats, change the number of features predicted on, run the model, and view various parts of its output. To run it, you will need Python installed along with the following libraries:
 
 - [pandas](https://pypi.org/project/pandas/)
 - [scikit-learn](https://pypi.org/project/scikit-learn/)
 
 In addition, you'll also need copies of the `eligible_player_data.csv` and `ineligible_player_data.csv` files. These files are provided in the repo for convenience, but may not be 100% current, as I only run the scraper to recreate them periodically.
 
-If you'd like to create the files yourself, you can run the `player-scraper.py` file, which requires Python along with the following libraries:
+If you'd like to create the files yourself, you can run the `player_scraper.py` file, which requires Python along with the following libraries:
 
 - [requests](https://pypi.org/project/requests/)
 - [pandas](https://pypi.org/project/pandas/)
