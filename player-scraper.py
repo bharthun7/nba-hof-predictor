@@ -13,7 +13,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 
-#prevents a Selenium window popping up every time it's used
+# prevents a Selenium window popping up every time it's used
 options = Options()
 options.add_argument("--headless")
 
@@ -235,20 +235,20 @@ def get_totals(row: pd.Series) -> pd.Series:
     try:
         # manual trigger to BR scrape if player is an ABA HOFer (id for Bobby Jones)
         if row["full_name"] in aba_hof or row["id"] == 77193:
-            print("HOFer played in ABA:")
+            # print("HOFer played in ABA:")
             raise KeyError
-        
+
         totals = playercareerstats.PlayerCareerStats(
             row["id"], headers=custom_headers
         ).get_data_frames()
     except KeyError:
         # this and all similar print statements are for my debugging
-        print(f"{row["full_name"]} scraped on BR")
+        # print(f"{row["full_name"]} scraped on BR")
         # a KeyError will occur if the player's page on nba.com is empty. In this case,
         # Selenium is needed to manually scrape Basketball Reference to get their
         # career stats
 
-        #headless options from before along with adblocker because BR has a lot of ads
+        # headless options from before along with adblocker because BR has a lot of ads
         driver = webdriver.Firefox(options=options)
         driver.install_addon("ublock_origin-1.68.0.xpi")
 
@@ -285,7 +285,7 @@ def get_totals(row: pd.Series) -> pd.Series:
         )
         # the check for the difference not being 0 is used in place of is_active column
         if season - last_season != 0 and season - last_season <= 4:
-            print("\tAlso inactive-ineligible")
+            # print("\tAlso inactive-ineligible")
             inactive_ineligibles.add(row["id"])
 
         # extract the career row by regex, as it position can vary if they player has
@@ -313,7 +313,7 @@ def get_totals(row: pd.Series) -> pd.Series:
 
         # if the player has played in the playoffs, process their playoff Series also
         if has_pf:
-            print("\tAlso played in playoffs")
+            # print("\tAlso played in playoffs")
             pf_totals = insert_missing(pf_totals).rename(br_rename).add_prefix("PF_")  # type: ignore
             # concatenate together relevant columns from regular season and playoffs
             return pd.concat(
@@ -328,15 +328,15 @@ def get_totals(row: pd.Series) -> pd.Series:
         # concatenate to ignore irrelevant columns and return that Series
         return pd.concat([totals[5:14], totals[18:-2]])
     except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
-        print(f"{row['full_name']} caused a timeout")
+        # print(f"{row['full_name']} caused a timeout")
         quit()
 
-    #the following lines are all for players with a valid nba.com page. The same
+    # the following lines are all for players with a valid nba.com page. The same
     # transformations are applied, just from nba.com instead of BR and without Selenium
 
     # if the player has no seasons, skip over them; they'll be removed later
     if len(totals[0]) == 0:
-        print(f"{row['full_name']} never played in the NBA")
+        # print(f"{row['full_name']} never played in the NBA")
         never_in_nba.add(row["id"])
         return pd.Series()
 
@@ -345,7 +345,7 @@ def get_totals(row: pd.Series) -> pd.Series:
         row["is_active"] == False
         and season - (int(totals[0].iloc[-1]["SEASON_ID"][:4]) + 1) <= 4
     ):
-        print(f"{row['full_name']} is inactive-ineligible")
+        # print(f"{row['full_name']} is inactive-ineligible")
         inactive_ineligibles.add(row["id"])
 
     # if a player has never played a playoff game, only return their regular season
@@ -370,19 +370,19 @@ def get_avgs(row: pd.Series) -> pd.Series:
     """
 
     # this is a very similar process to get_totals, with some minor differences. Refer
-    #comments in get_totals for a more detailed explanation of scraping/processing
+    # comments in get_totals for a more detailed explanation of scraping/processing
     sleep(10)
     try:
         if row["full_name"] in aba_hof or row["id"] == 77193:
-            print("HOFer played in ABA:")
+            # print("HOFer played in ABA:")
             raise KeyError
-        
-        #per_mode36 parameter is used to indicate we want averages
+
+        # per_mode36 parameter is used to indicate we want averages
         avgs = playercareerstats.PlayerCareerStats(
             row["id"], per_mode36="PerGame", headers=custom_headers
         ).get_data_frames()
     except KeyError:
-        print(f"{row["full_name"]} scraped on BR")
+        # print(f"{row["full_name"]} scraped on BR")
 
         driver = webdriver.Firefox(options=options)
         driver.install_addon("ublock_origin-1.68.0.xpi")
@@ -401,14 +401,14 @@ def get_avgs(row: pd.Series) -> pd.Series:
             ).get_attribute("href")
         driver.get(player_link)  # type: ignore
 
-        #different table on BR for career averages
+        # different table on BR for career averages
         avgs_table = driver.find_element(By.ID, "per_game_stats")
         avgs = pd.read_html(StringIO(avgs_table.get_attribute("outerHTML")))[0]
         avgs = avgs[avgs.fillna("")["Season"].str.contains(r"^\d+ Yrs?$")].iloc[0]
 
-        #inactive-ineligible status was already checked in get_totals
+        # inactive-ineligible status was already checked in get_totals
 
-        #similarly, different table for playoff averages
+        # similarly, different table for playoff averages
         pf_avgs_table = driver.find_elements(By.ID, "per_game_stats_post")
         has_pf = False
         if len(pf_avgs_table) == 1:
@@ -422,15 +422,15 @@ def get_avgs(row: pd.Series) -> pd.Series:
         driver.quit()
 
         # the extra rename here is to make sure average columns follow a consistent
-        #naming standard
+        # naming standard
         avgs = insert_missing(avgs).rename(br_rename).rename(rename_avgs)
 
         if has_pf:
-            print("\tAlso played in playoffs")
-            #same extra rename for playoff averages
+            # print("\tAlso played in playoffs")
+            # same extra rename for playoff averages
             pf_avgs = insert_missing(pf_avgs).rename(br_rename).rename(rename_avgs).add_prefix("PF_")  # type: ignore
-            #concatenating the averages requires more splicing, as games played, games
-            #started, and shooting splits are already included from get_totals
+            # concatenating the averages requires more splicing, as games played, games
+            # started, and shooting splits are already included from get_totals
             return pd.concat(
                 [
                     avgs[7:10],
@@ -454,14 +454,14 @@ def get_avgs(row: pd.Series) -> pd.Series:
             ]
         )
     except requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError:
-        print(f"{row['full_name']} caused a timeout")
+        # print(f"{row['full_name']} caused a timeout")
         quit()
 
     if len(avgs[0]) == 0:
-        print(f"{row['full_name']} never played in the NBA")
+        # print(f"{row['full_name']} never played in the NBA")
         return pd.Series()
 
-    #the clean_avgs function combines renaming average columns and concatenating them
+    # the clean_avgs function combines renaming average columns and concatenating them
     if len(avgs[3]) == 0:
         return clean_avgs(avgs[1])
 
@@ -492,15 +492,15 @@ def get_awards(row: pd.Series) -> pd.Series:
 
     # dictionary used to map All-NBA team numbers to distinguish between each team
     team_nums = {"1": "1st", "2": "2nd", "3": "3rd"}
-    #any team number column is converted to the appropriate award in a single column
+    # any team number column is converted to the appropriate award in a single column
     awards.loc[
         awards["ALL_NBA_TEAM_NUMBER"].fillna("").str.isnumeric(), "DESCRIPTION"
     ] = (
         awards["ALL_NBA_TEAM_NUMBER"].map(team_nums) + " Team " + awards["DESCRIPTION"]
     )
 
-    if "Hall of Fame Inductee" in awards["DESCRIPTION"].values:
-        print(f"{row['full_name']} is a Hall of Famer")
+    # if "Hall of Fame Inductee" in awards["DESCRIPTION"].values:
+    # print(f"{row['full_name']} is a Hall of Famer")
 
     # Hall of Fame Inductee is a listed award, so HOF status will be numeric for now
     return awards.groupby("DESCRIPTION").size()
